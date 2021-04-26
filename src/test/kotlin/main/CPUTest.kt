@@ -115,4 +115,31 @@ public class CPUTest {
     cpu.execute(uByteListOf(0x85, 0xFF, 0xB1, 0xFF, 0x00), false)
     Assert.assertEquals(0xDB.toUByte(), cpu.regA)
   }
+
+  @Test
+  fun testADCOverflow() {
+    val cpu = CPU()
+    // Negative overflow: http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html.
+    cpu.regA = 0xD0.toUByte()
+    cpu.execute(uByteListOf(0x69, 0x90, 0x00), false)
+    Assert.assertEquals(0x60.toUByte(), cpu.regA)
+    Assert.assertEquals(true, cpu.status_v)
+    Assert.assertEquals(true, cpu.status_c)
+
+    cpu.reset()
+    // Positive overflow.
+    cpu.regA = 0x50.toUByte()
+    cpu.execute(uByteListOf(0x69, 0x50, 0x00), false)
+    Assert.assertEquals(0xa0.toUByte(), cpu.regA)
+    Assert.assertEquals(true, cpu.status_v)
+    Assert.assertEquals(false, cpu.status_c)
+
+    cpu.reset()
+    // Not overflow but carry bit set.
+    cpu.regA = 0x50.toUByte()
+    cpu.execute(uByteListOf(0x69, 0xd0, 0x00), false)
+    Assert.assertEquals(0x20.toUByte(), cpu.regA)
+    Assert.assertEquals(false, cpu.status_v)
+    Assert.assertEquals(true, cpu.status_c)
+  }
 }
