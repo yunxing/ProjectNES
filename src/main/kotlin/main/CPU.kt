@@ -218,6 +218,13 @@ class CPU {
     updateZN(regA)
   }
 
+  fun and(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    val op = memRead(addr)
+    regA = regA and op
+    updateZN(regA)
+  }
+
   fun tax(mode: AddressingMode) {
     regX = regA
     updateZN(regX)

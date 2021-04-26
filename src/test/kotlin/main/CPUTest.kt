@@ -142,4 +142,13 @@ public class CPUTest {
     Assert.assertEquals(false, cpu.status_v)
     Assert.assertEquals(true, cpu.status_c)
   }
+
+  @Test
+  fun testAND() {
+    val cpu = CPU()
+    cpu.regA = 0x11.toUByte()
+    cpu.execute(uByteListOf(0x29, 0x10, 0x00), false)
+    Assert.assertEquals(0x10.toUByte(), cpu.regA)
+  }
+
 }
