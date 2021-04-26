@@ -8,6 +8,7 @@ fun UByte.bitIsSetAt(bit: Int): Boolean {
   return this.toInt() and mask != 0
 }
 
+@ExperimentalUnsignedTypes
 fun Boolean.toUShort() = if (this) 1.toUShort() else 0.toUShort()
 fun Boolean.toUByte() = if (this) 1.toUByte() else 0.toUByte()
 
@@ -20,12 +21,14 @@ fun KMutableProperty0<UShort>.incBy(amount: Int) {
 
 enum class AddressingMode {
   Immediate,
+  Accumulator,
   ZeroPage,
   ZeroPage_X,
   ZeroPage_Y,
   Absolute,
   Absolute_X,
   Absolute_Y,
+  Indirect,
   Indirect_X,
   Indirect_Y,
   Relative,
@@ -62,18 +65,22 @@ class CPU {
   }
 
   fun memRead16(addr: UShort): UShort {
-
     val lo = memRead(addr).toUShort()
-
     val hi = memRead(addr.inc()).toUShort()
+    return ((hi.toInt() shl 8) or (lo.toInt())).toUShort()
+  }
 
+  // Used for page boundary bug mode for 6502.
+  fun memRead16Wrapped(addr: UShort): UShort {
+    val lo = memRead(addr).toUShort()
+    val wrapped = (addr.inc() and 0x00FF.toUShort()) == 0.toUShort()
+    val hi = memRead(addr and 0xFF00.toUShort()).toUShort()
     return ((hi.toInt() shl 8) or (lo.toInt())).toUShort()
   }
 
   fun memRead16ZeroPage(addr: UByte): UShort {
     val lo = memRead(addr.toUShort()).toUShort()
     val hi = memRead(addr.inc().toUShort()).toUShort()
-
     return ((hi.toInt() shl 8) or (lo.toInt())).toUShort()
   }
 
@@ -131,6 +138,10 @@ class CPU {
       AddressingMode.ZeroPage_Y -> (memRead(pc) + regY).toUByte().toUShort()
       AddressingMode.Absolute_X -> (memRead16(pc) + regX).toUShort()
       AddressingMode.Absolute_Y -> (memRead16(pc) + regY).toUShort()
+      AddressingMode.Indirect -> {
+        val base = memRead16(pc)
+        memRead16Wrapped(base)
+      }
       AddressingMode.Indirect_X -> {
         val base = memRead(pc)
         val addr = (base + regX).toUByte().toUShort()
@@ -141,33 +152,11 @@ class CPU {
         val derefBase = memRead16ZeroPage(base)
         (regY + derefBase).toUShort()
       }
-      AddressingMode.NoneAddressing -> {
+      AddressingMode.NoneAddressing,
+      AddressingMode.Accumulator -> {
         TODO("Mode not supported")
       }
     }
-  }
-
-  fun updatePc(mode: AddressingMode) {
-    when (mode) {
-      AddressingMode.Immediate -> ::pc.incBy(1)
-      AddressingMode.ZeroPage -> ::pc.incBy(1)
-      AddressingMode.Absolute -> ::pc.incBy(2)
-      AddressingMode.ZeroPage_X -> ::pc.incBy(1)
-      AddressingMode.ZeroPage_Y -> ::pc.incBy(1)
-      AddressingMode.Absolute_X -> ::pc.incBy(2)
-      AddressingMode.Absolute_Y -> ::pc.incBy(2)
-      AddressingMode.Indirect_X -> ::pc.incBy(1)
-      AddressingMode.Indirect_Y -> ::pc.incBy(1)
-      AddressingMode.NoneAddressing -> {
-        TODO("Mode not supported")
-      }
-    }
-  }
-
-  fun getOpAddressAndUpdatePc(mode: AddressingMode): UShort {
-    val result = getOpAddress(mode)
-    updatePc(mode)
-    return result
   }
 
   companion object Static {
@@ -183,6 +172,7 @@ class CPU {
       // Used to check if branch instruction is called.
       val pcBefore = pc
       if (opcode == 0.toUByte()) {
+        status_b = true
         return
       }
       val op = opTable[opcode]
@@ -215,6 +205,11 @@ class CPU {
     updateZN(regX)
   }
 
+  private fun updateZNAndRegY(value: UByte) {
+    regY = value
+    updateZN(regY)
+  }
+
   fun adc(mode: AddressingMode) {
     val addr = getOpAddress(mode)
     val op = memRead(addr)
@@ -231,6 +226,151 @@ class CPU {
     val addr = getOpAddress(mode)
     val op = memRead(addr)
     updateZNAndRegA(regA and op)
+  }
+
+  fun asl(mode: AddressingMode) {
+    var op : UByte = 0.toUByte()
+    if (mode == AddressingMode.Accumulator) {
+      op = regA
+    } else {
+      val addr = getOpAddress(mode)
+      op = memRead(addr)
+    }
+    this.status_c = op.bitIsSetAt(7)
+    updateZNAndRegA((op.toInt() shl 1).toUByte())
+  }
+
+  fun bcc(mode: AddressingMode) {
+    if (status_c) {
+      pc = getOpAddress(mode)
+    }
+  }
+
+  fun bcs(mode: AddressingMode) {
+    if (!status_c) {
+      pc = getOpAddress(mode)
+    }
+  }
+
+  fun beq(mode: AddressingMode) {
+    if (status_z) {
+      pc = getOpAddress(mode)
+    }
+  }
+
+  fun bit(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    val op = memRead(addr)
+    val result = regA and op
+    updateZN(result)
+    status_v = result.bitIsSetAt(6)
+  }
+
+  fun bmi(mode: AddressingMode) {
+    if (status_n) {
+      pc = getOpAddress(mode)
+    }
+  }
+
+  fun bne(mode: AddressingMode) {
+    if (!status_z) {
+      pc = getOpAddress(mode)
+    }
+  }
+
+  fun bpl(mode: AddressingMode) {
+    if (!status_n) {
+      pc = getOpAddress(mode)
+    }
+  }
+
+  fun bvc(mode: AddressingMode) {
+    if (!status_v) {
+      pc = getOpAddress(mode)
+    }
+  }
+
+  fun bvs(mode: AddressingMode) {
+    if (status_v) {
+      pc = getOpAddress(mode)
+    }
+  }
+
+  fun clc(mode: AddressingMode) {
+    status_c = false
+  }
+
+
+  fun cld(mode: AddressingMode) {
+    status_d = false
+  }
+
+  fun cli(mode: AddressingMode) {
+    status_i = false
+  }
+
+  fun clv(mode: AddressingMode) {
+    status_v = false
+  }
+
+  fun compare(data: UByte, compareWith: UByte) {
+    status_c = data <= compareWith
+    updateZN((compareWith - data).toUByte())
+  }
+  fun cmp(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    val op = memRead(addr)
+    compare(op, regA)
+  }
+
+  fun cpx(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    val op = memRead(addr)
+    compare(op, regX)
+  }
+
+  fun cpy(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    val op = memRead(addr)
+    compare(op, regY)
+  }
+
+  fun dec(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    val op = memRead(addr)
+    memWrite(addr, op.dec())
+    updateZN(op.dec())
+  }
+  fun dex(mode: AddressingMode) {
+    updateZNAndRegX(regX.dec())
+  }
+  fun dey(mode: AddressingMode) {
+    updateZNAndRegY(regY.dec())
+  }
+
+  fun eor(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    val op = memRead(addr)
+    updateZNAndRegA(regA xor op)
+  }
+
+  fun inc(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    val op = memRead(addr)
+    memWrite(addr, op.inc())
+    updateZN(op.inc())
+  }
+
+  // avoiding jvm name collision
+  fun inx_fun(mode: AddressingMode) {
+    updateZNAndRegX(regX.inc())
+  }
+  fun iny(mode: AddressingMode) {
+    updateZNAndRegY(regY.inc())
+  }
+
+  fun jmp(mode: AddressingMode) {
+    pc = getOpAddress(mode)
   }
 
   fun tax(mode: AddressingMode) {

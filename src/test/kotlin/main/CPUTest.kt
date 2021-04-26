@@ -151,4 +151,267 @@ public class CPUTest {
     Assert.assertEquals(0x10.toUByte(), cpu.regA)
   }
 
+  @Test
+  fun testASL() {
+    val cpu = CPU()
+    cpu.regA = 0b0100_0000.toUByte()
+    cpu.execute(uByteListOf(0x0A, 0x00), false)
+    Assert.assertEquals(0b1000_0000.toUByte(), cpu.regA)
+    Assert.assertEquals(false, cpu.status_c)
+  }
+
+  @Test
+  fun testASLOverflow() {
+    val cpu = CPU()
+    cpu.regA = 0b1000_0000.toUByte()
+    cpu.execute(uByteListOf(0x0A, 0x00), false)
+    Assert.assertEquals(0x00.toUByte(), cpu.regA)
+    Assert.assertEquals(true, cpu.status_c)
+  }
+
+  @Test
+  fun testBCC() {
+    val cpu = CPU()
+    cpu.regA = 0b0000_0001.toUByte()
+    cpu.status_c = true
+    cpu.execute(uByteListOf(0x90, 0x03, 0x0A, 0x0A, 0x00), false)
+    // Skipped one shift, but should have done another shift.
+    Assert.assertEquals(0b0000_0010.toUByte(), cpu.regA)
+  }
+
+  @Test
+  fun testBCCNot() {
+    val cpu = CPU()
+    cpu.regA = 0b0000_0001.toUByte()
+    cpu.status_c = false
+    cpu.execute(uByteListOf(0x90, 0x03, 0x0A, 0x0A, 0x00), false)
+    // Not doing branch.
+    Assert.assertEquals(0b0000_0100.toUByte(), cpu.regA)
+  }
+
+  @Test
+  fun testBCS() {
+    val cpu = CPU()
+    cpu.regA = 0b0000_0001.toUByte()
+    cpu.status_c = false
+    cpu.execute(uByteListOf(0xB0, 0x03, 0x0A, 0x0A, 0x00), false)
+    // Skipped one shift, but should have done another shift.
+    Assert.assertEquals(0b0000_0010.toUByte(), cpu.regA)
+  }
+
+  @Test
+  fun testBCSNot() {
+    val cpu = CPU()
+    cpu.regA = 0b0000_0001.toUByte()
+    cpu.status_c = true
+    cpu.execute(uByteListOf(0xB0, 0x03, 0x0A, 0x0A, 0x00), false)
+    // Not doing branch.
+    Assert.assertEquals(0b0000_0100.toUByte(), cpu.regA)
+  }
+
+  @Test
+  fun testBEQ() {
+    val cpu = CPU()
+    cpu.regA = 0b0000_0001.toUByte()
+    cpu.status_z = true
+    cpu.execute(uByteListOf(0xF0, 0x03, 0x0A, 0x0A, 0x00), false)
+    // Skipped one shift, but should have done another shift.
+    Assert.assertEquals(0b0000_0010.toUByte(), cpu.regA)
+  }
+
+  @Test
+  fun testBIT() {
+    val cpu = CPU()
+    cpu.regA = 0b0100_0000.toUByte()
+    cpu.mem[0x01] = 0b1111_0000.toUByte()
+    cpu.execute(uByteListOf(0x24, 0x01, 0x00), false)
+    Assert.assertEquals(cpu.status_v, true)
+  }
+
+  @Test
+  fun testBMI() {
+    val cpu = CPU()
+    cpu.regA = 0b0000_0001.toUByte()
+    cpu.status_n = true
+    cpu.execute(uByteListOf(0x30, 0x03, 0x0A, 0x0A, 0x00), false)
+    // Skipped one shift, but should have done another shift.
+    Assert.assertEquals(0b0000_0010.toUByte(), cpu.regA)
+  }
+
+  @Test
+  fun testBNE() {
+    val cpu = CPU()
+    cpu.regA = 0b0000_0001.toUByte()
+    cpu.status_z = false
+    cpu.execute(uByteListOf(0xD0, 0x03, 0x0A, 0x0A, 0x00), false)
+    // Skipped one shift, but should have done another shift.
+    Assert.assertEquals(0b0000_0010.toUByte(), cpu.regA)
+  }
+
+  @Test
+  fun testBPL() {
+    val cpu = CPU()
+    cpu.regA = 0b0000_0001.toUByte()
+    cpu.status_n = false
+    cpu.execute(uByteListOf(0x10, 0x03, 0x0A, 0x0A, 0x00), false)
+    Assert.assertEquals(0b0000_0010.toUByte(), cpu.regA)
+  }
+
+  @Test
+  fun testBVC() {
+    val cpu = CPU()
+    cpu.regA = 0b0000_0001.toUByte()
+    cpu.status_v = false
+    cpu.execute(uByteListOf(0x50, 0x03, 0x0A, 0x0A, 0x00), false)
+    Assert.assertEquals(0b0000_0010.toUByte(), cpu.regA)
+  }
+
+  @Test
+  fun testBVS() {
+    val cpu = CPU()
+    cpu.regA = 0b0000_0001.toUByte()
+    cpu.status_v = true
+    cpu.execute(uByteListOf(0x70, 0x03, 0x0A, 0x0A, 0x00), false)
+    Assert.assertEquals(0b0000_0010.toUByte(), cpu.regA)
+  }
+
+  @Test
+  fun testClears() {
+    val cpu = CPU()
+    cpu.status_c = true
+    cpu.execute(uByteListOf(0x18, 0x00), false)
+    Assert.assertEquals(false, cpu.status_c)
+
+    cpu.status_d = true
+    cpu.execute(uByteListOf(0xD8, 0x00), false)
+    Assert.assertEquals(false, cpu.status_d)
+
+    cpu.status_i = true
+    cpu.execute(uByteListOf(0x58, 0x00), false)
+    Assert.assertEquals(false, cpu.status_i)
+
+    cpu.status_v = true
+    cpu.execute(uByteListOf(0xB8, 0x00), false)
+    Assert.assertEquals(false, cpu.status_v)
+  }
+
+  fun testCompareInternal(cpu: CPU, op : Int) {
+    cpu.mem[0x0] = 0b0100_0000.toUByte()
+    cpu.execute(uByteListOf(op, 0x00, 0x00), false)
+    Assert.assertEquals(true, cpu.status_c)
+    Assert.assertEquals(true, cpu.status_n)
+    Assert.assertEquals(false, cpu.status_z)
+    cpu.mem[0x0] = 0b1100_0000.toUByte()
+    cpu.execute(uByteListOf(op, 0x00, 0x00), false)
+    Assert.assertEquals(true, cpu.status_z)
+  }
+
+  @Test
+  fun testCompare() {
+    val cpu = CPU()
+    cpu.regA = 0b1100_0000.toUByte()
+    testCompareInternal(cpu, 0xC5)
+  }
+
+  @Test
+  fun testCompareX() {
+    val cpu = CPU()
+    cpu.regX = 0b1100_0000.toUByte()
+    testCompareInternal(cpu, 0xE4)
+  }
+
+  @Test
+  fun testCompareY() {
+    val cpu = CPU()
+    cpu.regY = 0b1100_0000.toUByte()
+    testCompareInternal(cpu, 0xC4)
+  }
+
+  @Test
+  fun testDECOverflow() {
+    val cpu = CPU()
+    cpu.mem[0x00] = 0x00.toUByte()
+    cpu.execute(uByteListOf(0xC6, 0x00, 0x00), false)
+    Assert.assertEquals(0xFF.toUByte(), cpu.mem[0x00])
+    Assert.assertEquals(true, cpu.status_n)
+  }
+
+  @Test
+  fun testDECZero() {
+    val cpu = CPU()
+    cpu.mem[0x00] = 0x01.toUByte()
+    cpu.execute(uByteListOf(0xC6, 0x00, 0x00), false)
+    Assert.assertEquals(0x00.toUByte(), cpu.mem[0x00])
+    Assert.assertEquals(true, cpu.status_z)
+  }
+
+  @Test
+  fun testDEX() {
+    val cpu = CPU()
+    cpu.regX = 0x01.toUByte()
+    cpu.execute(uByteListOf(0xCA, 0x00, 0x00), false)
+    Assert.assertEquals(0x00.toUByte(), cpu.regX)
+    Assert.assertEquals(true, cpu.status_z)
+  }
+
+  @Test
+  fun testDEY() {
+    val cpu = CPU()
+    cpu.regY = 0x01.toUByte()
+    cpu.execute(uByteListOf(0x88, 0x00, 0x00), false)
+    Assert.assertEquals(0x00.toUByte(), cpu.regY)
+    Assert.assertEquals(true, cpu.status_z)
+  }
+
+  @Test
+  fun testEOR() {
+    val cpu = CPU()
+    cpu.regA = 0b1000_0000.toUByte()
+    cpu.execute(uByteListOf(0x49, 0b0100_0000, 0x00), false)
+    Assert.assertEquals(0b1100_0000.toUByte(), cpu.regA)
+    Assert.assertEquals(true, cpu.status_n)
+  }
+
+  @Test
+  fun testINC() {
+    val cpu = CPU()
+    cpu.mem[0x00] = 0xFF.toUByte()
+    cpu.execute(uByteListOf(0xE6, 0x00, 0x00), false)
+    Assert.assertEquals(0x00.toUByte(), cpu.mem[0x00])
+    Assert.assertEquals(true, cpu.status_z)
+  }
+
+  @Test
+  fun testINY() {
+    val cpu = CPU()
+    cpu.regY = 0x00.toUByte()
+    cpu.execute(uByteListOf(0xC8, 0x00, 0x00), false)
+    Assert.assertEquals(0x01.toUByte(), cpu.regY)
+  }
+
+  @Test
+  fun testJMPIndirect() {
+    val cpu = CPU()
+    cpu.regA = 0b0000_0001.toUByte()
+    cpu.mem[0x02] = 0x0A.toUByte()
+    // BRK after 0x02.
+    cpu.mem[0x03] = 0x00.toUByte()
+    cpu.mem[0x00] = 0x02.toUByte()
+    cpu.execute(uByteListOf(0x6C, 0x00, 0x00), false)
+    Assert.assertEquals(0b0000_0010.toUByte(), cpu.regA)
+  }
+
+  @Test
+  fun testJMPPageBoundary() {
+    val cpu = CPU()
+    cpu.regA = 0b0000_0001.toUByte()
+    cpu.mem[0x3000] = 0x40.toUByte()
+    // BRK after 0x02.
+    cpu.mem[0x30FF] = 0x80.toUByte()
+    cpu.mem[0x3100] = 0x50.toUByte()
+    cpu.mem[0x4080] = 0x0A.toUByte()
+    cpu.mem[0x4081] = 0x00.toUByte()
+    cpu.execute(uByteListOf(0x6C, 0xFF, 0x30), false)
+    Assert.assertEquals(0b0000_0010.toUByte(), cpu.regA)
+  }
 }
