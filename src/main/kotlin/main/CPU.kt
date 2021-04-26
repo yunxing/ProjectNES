@@ -205,6 +205,16 @@ class CPU {
     status_n = value.bitIsSetAt(7)
   }
 
+  private fun updateZNAndRegA(value: UByte) {
+    regA = value
+    updateZN(regA)
+  }
+
+  private fun updateZNAndRegX(value: UByte) {
+    regX = value
+    updateZN(regX)
+  }
+
   fun adc(mode: AddressingMode) {
     val addr = getOpAddress(mode)
     val op = memRead(addr)
@@ -214,37 +224,35 @@ class CPU {
     status_v = (regA xor result) and
       (op xor result) and
       0x80.toUByte() != 0.toUByte()
-    regA = result
-    updateZN(regA)
+    updateZNAndRegA(result)
   }
 
   fun and(mode: AddressingMode) {
     val addr = getOpAddress(mode)
     val op = memRead(addr)
-    regA = regA and op
-    updateZN(regA)
+    updateZNAndRegA(regA and op)
   }
 
   fun tax(mode: AddressingMode) {
     regX = regA
-    updateZN(regX)
+    updateZNAndRegX(regX)
   }
 
   fun lda(mode: AddressingMode) {
     val addr = getOpAddress(mode)
     val op = memRead(addr)
     regA = op
-    updateZN(regA)
+    updateZNAndRegA(regA)
   }
 
   fun sta(mode: AddressingMode) {
     val addr = getOpAddress(mode)
-    val op = memWrite(addr, regA)
+    memWrite(addr, regA)
   }
 
   fun inx(mode: AddressingMode) {
     regX = regX.inc()
-    updateZN(regX)
+    updateZNAndRegX(regX)
   }
 }
 
