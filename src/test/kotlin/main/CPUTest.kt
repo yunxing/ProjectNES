@@ -424,4 +424,22 @@ public class CPUTest {
     Assert.assertEquals(0x02.toUByte(), cpu.mem[0x10FE])
     Assert.assertEquals(0x10FD.toUShort(), cpu.sp)
   }
+
+  @Test
+  fun testLDXZero() {
+    val cpu = CPU()
+    cpu.execute(uByteListOf(0xA2, 0x00, 0x00))
+    Assert.assertEquals(cpu.regX, 0x00.toUByte())
+    Assert.assertEquals(cpu.status_n, false)
+    Assert.assertEquals(cpu.status_z, true)
+  }
+
+  @Test
+  fun testLDYZero() {
+    val cpu = CPU()
+    cpu.execute(uByteListOf(0xA0, 0x00, 0x00))
+    Assert.assertEquals(cpu.regY, 0x00.toUByte())
+    Assert.assertEquals(cpu.status_n, false)
+    Assert.assertEquals(cpu.status_z, true)
+  }
 }

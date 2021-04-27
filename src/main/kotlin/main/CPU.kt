@@ -391,16 +391,48 @@ class CPU {
     pc = getOpAddress(mode)
   }
 
+  fun lda(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    updateZNAndRegA(memRead(addr))
+  }
+
+  fun ldx(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    updateZNAndRegX(memRead(addr))
+  }
+
+  fun ldy(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    updateZNAndRegY(memRead(addr))
+  }
+
+  fun nop(mode: AddressingMode) = Unit
+
+  fun lsr(mode: AddressingMode) {
+    var op : UByte = 0.toUByte()
+    if (mode == AddressingMode.Accumulator) {
+      op = regA
+    } else {
+      val addr = getOpAddress(mode)
+      op = memRead(addr)
+    }
+    this.status_c = op.bitIsSetAt(0)
+    updateZNAndRegA((op.toInt() shr 1).toUByte())
+  }
+
+  fun ora(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    val op = memRead(addr)
+    updateZNAndRegA(regA or op)
+  }
+
+  fun pha(mode: AddressingMode) {
+    stackPush(regA);
+  }
+
   fun tax(mode: AddressingMode) {
     regX = regA
     updateZNAndRegX(regX)
-  }
-
-  fun lda(mode: AddressingMode) {
-    val addr = getOpAddress(mode)
-    val op = memRead(addr)
-    regA = op
-    updateZNAndRegA(regA)
   }
 
   fun sta(mode: AddressingMode) {

@@ -117,6 +117,37 @@ val cpuOpcodes: List<Opcode> = mutableListOf<Opcode>().apply {
   add(Opcode(0xA1, CPU::lda, 2, AddressingMode.Indirect_X))
   add(Opcode(0xB1, CPU::lda, 2, AddressingMode.Indirect_Y))
 
+  add(Opcode(0xA2, CPU::ldx, 2, AddressingMode.Immediate))
+  add(Opcode(0xA6, CPU::ldx, 2, AddressingMode.ZeroPage))
+  add(Opcode(0xB6, CPU::ldx, 2, AddressingMode.ZeroPage_Y))
+  add(Opcode(0xAE, CPU::ldx, 3, AddressingMode.Absolute))
+  add(Opcode(0xBE, CPU::ldx, 3, AddressingMode.Absolute_Y))
+
+  add(Opcode(0xA0, CPU::ldy, 2, AddressingMode.Immediate))
+  add(Opcode(0xA4, CPU::ldy, 2, AddressingMode.ZeroPage))
+  add(Opcode(0xB4, CPU::ldy, 2, AddressingMode.ZeroPage_X))
+  add(Opcode(0xAC, CPU::ldy, 3, AddressingMode.Absolute))
+  add(Opcode(0xBC, CPU::ldy, 3, AddressingMode.Absolute_X))
+
+  add(Opcode(0x4A, CPU::lsr, 1, AddressingMode.Accumulator))
+  add(Opcode(0x46, CPU::lsr, 2, AddressingMode.ZeroPage))
+  add(Opcode(0x56, CPU::lsr, 2, AddressingMode.ZeroPage_X))
+  add(Opcode(0x4E, CPU::lsr, 3, AddressingMode.Absolute))
+  add(Opcode(0x5E, CPU::lsr, 3, AddressingMode.Absolute_X))
+
+  add(Opcode(0xEA, CPU::nop, 1, AddressingMode.NoneAddressing))
+
+  add(Opcode(0x09, CPU::ora, 2, AddressingMode.Immediate))
+  add(Opcode(0x05, CPU::ora, 2, AddressingMode.ZeroPage))
+  add(Opcode(0x15, CPU::ora, 2, AddressingMode.ZeroPage_X))
+  add(Opcode(0x0D, CPU::ora, 3, AddressingMode.Absolute))
+  add(Opcode(0x1D, CPU::ora, 3, AddressingMode.Absolute_X))
+  add(Opcode(0x19, CPU::ora, 3, AddressingMode.Absolute_Y))
+  add(Opcode(0x01, CPU::ora, 2, AddressingMode.Indirect_X))
+  add(Opcode(0x11, CPU::ora, 2, AddressingMode.Indirect_Y))
+
+  add(Opcode(0x48, CPU::pha, 1, AddressingMode.NoneAddressing))
+
   add(Opcode(0x85, CPU::sta, 2, AddressingMode.ZeroPage))
   add(Opcode(0x95, CPU::sta, 2, AddressingMode.ZeroPage_X))
   add(Opcode(0x8D, CPU::sta, 3, AddressingMode.Absolute))
@@ -125,13 +156,5 @@ val cpuOpcodes: List<Opcode> = mutableListOf<Opcode>().apply {
   add(Opcode(0x81, CPU::sta, 2, AddressingMode.Indirect_X))
   add(Opcode(0x91, CPU::sta, 2, AddressingMode.Indirect_Y))
 
-  // add(Opcode(0xE8, CPU::inx, 1, AddressingMode.NoneAddressing))
-//  add(Opcode(0xA5, CPU::lda, 2, 3, AddressingMode.NoneAddressing))
-//  add(Opcode(0xB5, CPU::lda, 2, 4, AddressingMode.NoneAddressing))
-//  add(Opcode(0xAD, CPU::lda, 3, 4, AddressingMode.NoneAddressing))
-//  add(Opcode(0xBD, CPU::lda, 3, 4, AddressingMode.NoneAddressing))
-//  add(Opcode(0xB9, CPU::lda, 3, 4, AddressingMode.NoneAddressing))
-//  add(Opcode(0xA1, CPU::lda, 2, 6, AddressingMode.NoneAddressing))
-//  add(Opcode(0xB1, CPU::lda, 2, 5, AddressingMode.NoneAddressing))
 
 }
