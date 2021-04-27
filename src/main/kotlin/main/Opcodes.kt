@@ -16,6 +16,7 @@ data class Opcode(
     this(opcode.toUByte(), handler, bytes.toUShort(), mode)
 }
 
+@kotlin.ExperimentalUnsignedTypes
 val cpuOpcodes: List<Opcode> = mutableListOf<Opcode>().apply {
   add(Opcode(0x69, CPU::adc, 2, AddressingMode.Immediate))
   add(Opcode(0x65, CPU::adc, 2, AddressingMode.ZeroPage))
@@ -99,11 +100,13 @@ val cpuOpcodes: List<Opcode> = mutableListOf<Opcode>().apply {
   add(Opcode(0xEE, CPU::inc, 3, AddressingMode.Absolute))
   add(Opcode(0xFE, CPU::inc, 3, AddressingMode.Absolute_X))
 
-  add(Opcode(0xE8, CPU::inx_fun, 1, AddressingMode.NoneAddressing))
+  add(Opcode(0xE8, CPU::inxFun, 1, AddressingMode.NoneAddressing))
   add(Opcode(0xC8, CPU::iny, 1, AddressingMode.NoneAddressing))
 
   add(Opcode(0x4C, CPU::jmp, 3, AddressingMode.Absolute))
   add(Opcode(0x6C, CPU::jmp, 3, AddressingMode.Indirect))
+
+  add(Opcode(0x20, CPU::jsr, 3, AddressingMode.Absolute))
 
   add(Opcode(0xA9, CPU::lda, 2, AddressingMode.Immediate))
   add(Opcode(0xA5, CPU::lda, 2, AddressingMode.ZeroPage))

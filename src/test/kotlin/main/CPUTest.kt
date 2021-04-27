@@ -414,4 +414,14 @@ public class CPUTest {
     cpu.execute(uByteListOf(0x6C, 0xFF, 0x30), false)
     Assert.assertEquals(0b0000_0010.toUByte(), cpu.regA)
   }
+
+  @Test
+  fun testJSR() {
+    val cpu = CPU()
+    cpu.mem[0x0001] = 0x00.toUByte()
+    cpu.execute(uByteListOf(0x20, 0x01, 0x00), false)
+    Assert.assertEquals(0x80.toUByte(), cpu.mem[0x10FF])
+    Assert.assertEquals(0x02.toUByte(), cpu.mem[0x10FE])
+    Assert.assertEquals(0x10FD.toUShort(), cpu.sp)
+  }
 }

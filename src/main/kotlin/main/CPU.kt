@@ -48,7 +48,8 @@ class CPU {
   var status_v: Boolean = false
   var status_n: Boolean = false
   var mem = UByteArray(0xFFFF)
-  var pc: UShort = 0.toUShort()
+  var pc: UShort = 0u
+  var sp: UShort = 0x10FFu
 
   val opTable: HashMap<UByte, Opcode> = hashMapOf<UByte, Opcode>().apply {
     for (opcode in cpuOpcodes) {
@@ -73,8 +74,8 @@ class CPU {
   // Used for page boundary bug mode for 6502.
   fun memRead16Wrapped(addr: UShort): UShort {
     val lo = memRead(addr).toUShort()
-    val wrapped = (addr.inc() and 0x00FF.toUShort()) == 0.toUShort()
-    val hi = memRead(addr and 0xFF00.toUShort()).toUShort()
+    val wrapped = (addr.inc() and 0x00FFu) == 0.toUShort()
+    val hi = memRead(addr and 0xFF00u).toUShort()
     return ((hi.toInt() shl 8) or (lo.toInt())).toUShort()
   }
 
@@ -362,7 +363,7 @@ class CPU {
   }
 
   // avoiding jvm name collision
-  fun inx_fun(mode: AddressingMode) {
+  fun inxFun(mode: AddressingMode) {
     updateZNAndRegX(regX.inc())
   }
   fun iny(mode: AddressingMode) {
@@ -370,6 +371,23 @@ class CPU {
   }
 
   fun jmp(mode: AddressingMode) {
+    pc = getOpAddress(mode)
+  }
+
+  private fun stackPush(data: UByte) {
+    memWrite(sp, data)
+    sp = sp.dec()
+  }
+
+  private fun stackPush16(data: UShort) {
+    val hi = (data.toInt() shr 8).toUByte()
+    val lo = data.toUByte()
+    stackPush(hi)
+    stackPush(lo)
+  }
+
+  fun jsr(mode: AddressingMode) {
+    stackPush16((pc + 2U - 1U).toUShort());
     pc = getOpAddress(mode)
   }
 
