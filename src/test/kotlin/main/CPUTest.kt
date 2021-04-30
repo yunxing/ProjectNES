@@ -497,4 +497,49 @@ public class CPUTest {
     cpu.execute(uByteListOf(0x6A, 0x00), false)
     Assert.assertEquals(0b1110_0000.toUByte(), cpu.regA)
   }
+
+  @Test
+  fun testSets() {
+    val cpu = CPU()
+    cpu.status_c = false
+    cpu.execute(uByteListOf(0x38, 0x00), false)
+    Assert.assertEquals(true, cpu.status_c)
+
+    cpu.status_d = false
+    cpu.execute(uByteListOf(0xF8, 0x00), false)
+    Assert.assertEquals(true, cpu.status_d)
+
+    cpu.status_i = false
+    cpu.execute(uByteListOf(0x78, 0x00), false)
+    Assert.assertEquals(true, cpu.status_i)
+  }
+
+  @Test
+  fun testSTXZeroPageY() {
+    val cpu = CPU()
+    cpu.regX = 0xDBu
+    cpu.regY = 0x01u
+    cpu.execute(uByteListOf(0x96, 0x01, 0x00), false)
+    Assert.assertEquals(0xDB.toUByte(), cpu.mem[0x02])
+  }
+
+  @Test
+  fun testSTYZeroPageX() {
+    // reverse of previous test
+    val cpu = CPU()
+    cpu.regY = 0xDBu
+    cpu.regX = 0x01u
+    cpu.execute(uByteListOf(0x94, 0x01, 0x00), false)
+    Assert.assertEquals(0xDB.toUByte(), cpu.mem[0x02])
+  }
+
+  @Test
+  fun testTAY() {
+    val cpu = CPU()
+    cpu.execute(uByteListOf(0xA9, 0x5, 0xA8, 0x00))
+    Assert.assertEquals(cpu.regA, 0x05.toUByte())
+    Assert.assertEquals(cpu.regY, 0x05.toUByte())
+    Assert.assertEquals(cpu.status_n, false)
+    Assert.assertEquals(cpu.status_z, false)
+  }
 }

@@ -587,9 +587,16 @@ class CPU {
     addToRegA((-data.toInt() - 1).toUByte())
   }
 
-  fun tax(mode: AddressingMode) {
-    regX = regA
-    updateZNAndRegX(regX)
+  fun sec(mode: AddressingMode) {
+    status_c = true
+  }
+
+  fun sed(mode: AddressingMode) {
+    status_d = true
+  }
+
+  fun sei(mode: AddressingMode) {
+    status_i = true
   }
 
   fun sta(mode: AddressingMode) {
@@ -597,9 +604,22 @@ class CPU {
     memWrite(addr, regA)
   }
 
-  fun inx(mode: AddressingMode) {
-    regX = regX.inc()
-    updateZNAndRegX(regX)
+  fun stx(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    memWrite(addr, regX)
+  }
+
+  fun sty(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    memWrite(addr, regY)
+  }
+
+  fun tax(mode: AddressingMode) {
+    updateZNAndRegX(regA)
+  }
+
+  fun tay(mode: AddressingMode) {
+    updateZNAndRegY(regA)
   }
 }
 
