@@ -325,16 +325,21 @@ class CPU {
     updateZN(regY)
   }
 
-  fun adc(mode: AddressingMode) {
-    val addr = getOpAddress(mode)
-    val op = memRead(addr)
-    val sum = regA.toUShort() + status_c.toUShort() + op.toUShort()
+  // Performs A + data + carry
+  private fun addToRegA(data: UByte) {
+    val sum = regA.toUShort() + status_c.toUShort() + data.toUShort()
     val result = sum.toUByte()
     status_c = sum > 0xFF.toUShort()
     status_v = (regA xor result) and
-      (op xor result) and
+      (data xor result) and
       0x80.toUByte() != 0.toUByte()
     updateZNAndRegA(result)
+  }
+
+  fun adc(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    val op = memRead(addr)
+    addToRegA(op)
   }
 
   fun and(mode: AddressingMode) {
@@ -561,6 +566,25 @@ class CPU {
       { it.rotateRight(1) },
       { updateZN(it) },
     )
+  }
+
+  fun rti(mode: AddressingMode) {
+    statusFromUByte(stackPop())
+    pc = stackPop16()
+  }
+
+  fun rts(mode: AddressingMode) {
+    // In our implementation we increment pc before each instruction. RTS expects pc to be increment
+    // after each instruction. Use an additional +1 to account for the difference here.
+    pc = (stackPop16() + 1u).toUShort()
+  }
+
+  fun sbc(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    val data = memRead(addr)
+    // SBC = A - data - (1 - C), which can be simplified to
+    //     = A + ((-data) - 1) + C
+    addToRegA((-data.toInt() - 1).toUByte())
   }
 
   fun tax(mode: AddressingMode) {
