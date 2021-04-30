@@ -35,7 +35,7 @@ enum class AddressingMode {
   NoneAddressing,
 }
 
-@ExperimentalUnsignedTypes
+@OptIn(ExperimentalStdlibApi::class, ExperimentalUnsignedTypes::class)
 class CPU {
   var regA: UByte = 0.toUByte()
   var regX: UByte = 0.toUByte()
@@ -44,11 +44,16 @@ class CPU {
   var status_z: Boolean = false
   var status_i: Boolean = false
   var status_d: Boolean = false
-  var status_b: Boolean = false
+  var status_b_hi: Boolean = false
+  var status_b_lo: Boolean = false
   var status_v: Boolean = false
   var status_n: Boolean = false
   var mem = UByteArray(0xFFFF)
+
+  // Program counter.
   var pc: UShort = 0u
+
+  // Stack pointer.
   var sp: UShort = 0x10FFu
 
   val opTable: HashMap<UByte, Opcode> = hashMapOf<UByte, Opcode>().apply {
@@ -58,6 +63,85 @@ class CPU {
       ) {
         "Opcode %04X already exists".format(opcode.opcode.toInt())
       }
+    }
+  }
+  private fun stackPush(data: UByte) {
+    println("push stack %8s".format(Integer.toBinaryString(data.toInt())))
+    memWrite(sp, data)
+    sp = sp.dec()
+
+  }
+
+  private fun stackPush16(data: UShort) {
+    val hi = (data.toInt() shr 8).toUByte()
+    val lo = data.toUByte()
+    stackPush(hi)
+    stackPush(lo)
+  }
+
+  // Pop stack and update stack pointer.
+  private fun stackPop(): UByte {
+    sp = sp.inc()
+    return memRead(sp)
+  }
+
+  private fun stackPop16(): UShort {
+    // Order matters here as stackPop updates stack pointer.
+    val lo = stackPop()
+    val hi = stackPop()
+    return ((hi.toInt() shl 8) or (lo.toInt())).toUShort()
+  }
+
+  private fun statusAsUByte(): UByte {
+    var result: UByte = 0u
+    if (status_n) {
+      result = result or 0b1000_0000u
+    }
+    if (status_v) {
+      result = result or 0b0100_0000u
+    }
+    if (status_b_hi) {
+      result = result or 0b0010_0000u
+    }
+    if (status_b_lo) {
+      result = result or 0b0001_0000u
+    }
+    if (status_d) {
+      result = result or 0b0000_1000u
+    }
+    if (status_i) {
+      result = result or 0b0000_0100u
+    }
+    if (status_z) {
+      result = result or 0b0000_0010u
+    }
+    if (status_c) {
+      result = result or 0b0000_0001u
+    }
+    return result
+  }
+
+  private fun statusFromUByte(data: UByte) {
+    var result: UByte = 0u
+    if (data and 0b1000_0000u != 0.toUByte()) {
+      status_n = true
+    }
+    if (data and 0b0100_0000u != 0.toUByte()) {
+      status_v = true
+    }
+    status_b_hi = false
+    status_b_lo = false
+    if (data and 0b0000_1000u != 0.toUByte()) {
+      status_d = true
+    }
+    if (data and 0b0000_0100u != 0.toUByte()) {
+      status_i = true
+    }
+    if (data and 0b0000_0010u != 0.toUByte()) {
+      status_z = true
+    }
+    if (data and 0b0000_0001u != 0.toUByte()) {
+      status_c = true
     }
   }
 
@@ -73,9 +157,9 @@ class CPU {
 
   // Used for page boundary bug mode for 6502.
   fun memRead16Wrapped(addr: UShort): UShort {
-    val lo = memRead(addr).toUShort()
+    val lo = memRead(addr)
     val wrapped = (addr.inc() and 0x00FFu) == 0.toUShort()
-    val hi = memRead(addr and 0xFF00u).toUShort()
+    val hi = memRead(if (wrapped) {addr and 0xFF00u} else {addr.inc()})
     return ((hi.toInt() shl 8) or (lo.toInt())).toUShort()
   }
 
@@ -83,6 +167,32 @@ class CPU {
     val lo = memRead(addr.toUShort()).toUShort()
     val hi = memRead(addr.inc().toUShort()).toUShort()
     return ((hi.toInt() shl 8) or (lo.toInt())).toUShort()
+  }
+
+  fun inplaceModifyAorMem(
+    mode: AddressingMode,
+    preprocess: (UByte) -> Unit,
+    modifier: (UByte) -> UByte,
+    postprocess: (UByte) -> Unit,
+  ) {
+    // Read
+    var op: UByte = if (mode == AddressingMode.Accumulator) {
+      regA
+    } else {
+      val addr = getOpAddress(mode)
+      memRead(addr)
+    }
+    // Process
+    preprocess(op)
+    val result = modifier(op)
+    postprocess(result)
+    // Write back.
+    if (mode == AddressingMode.Accumulator) {
+      regA = result
+    } else {
+      val addr = getOpAddress(mode)
+      memWrite(addr, result)
+    }
   }
 
   fun memWrite(addr: UShort, data: UByte) {
@@ -113,7 +223,8 @@ class CPU {
     status_z = false
     status_i = false
     status_d = false
-    status_b = false
+    status_b_hi = false
+    status_b_lo = false
     status_v = false
     status_n = false
 
@@ -141,7 +252,9 @@ class CPU {
       AddressingMode.Absolute_Y -> (memRead16(pc) + regY).toUShort()
       AddressingMode.Indirect -> {
         val base = memRead16(pc)
-        memRead16Wrapped(base)
+        val result = memRead16Wrapped(base)
+        println("Base %4X".format(result.toInt()))
+        result
       }
       AddressingMode.Indirect_X -> {
         val base = memRead(pc)
@@ -173,7 +286,8 @@ class CPU {
       // Used to check if branch instruction is called.
       val pcBefore = pc
       if (opcode == 0.toUByte()) {
-        status_b = true
+        status_b_hi = true
+        status_b_lo = true
         return
       }
       val op = opTable[opcode]
@@ -230,15 +344,11 @@ class CPU {
   }
 
   fun asl(mode: AddressingMode) {
-    var op : UByte = 0.toUByte()
-    if (mode == AddressingMode.Accumulator) {
-      op = regA
-    } else {
-      val addr = getOpAddress(mode)
-      op = memRead(addr)
-    }
-    this.status_c = op.bitIsSetAt(7)
-    updateZNAndRegA((op.toInt() shl 1).toUByte())
+    inplaceModifyAorMem(
+      mode,
+      { this.status_c = it.bitIsSetAt(7) },
+      { (it.toInt() shl 1).toUByte() },
+      { updateZN(it) })
   }
 
   fun bcc(mode: AddressingMode) {
@@ -318,6 +428,7 @@ class CPU {
     status_c = data <= compareWith
     updateZN((compareWith - data).toUByte())
   }
+
   fun cmp(mode: AddressingMode) {
     val addr = getOpAddress(mode)
     val op = memRead(addr)
@@ -342,9 +453,11 @@ class CPU {
     memWrite(addr, op.dec())
     updateZN(op.dec())
   }
+
   fun dex(mode: AddressingMode) {
     updateZNAndRegX(regX.dec())
   }
+
   fun dey(mode: AddressingMode) {
     updateZNAndRegY(regY.dec())
   }
@@ -366,6 +479,7 @@ class CPU {
   fun inxFun(mode: AddressingMode) {
     updateZNAndRegX(regX.inc())
   }
+
   fun iny(mode: AddressingMode) {
     updateZNAndRegY(regY.inc())
   }
@@ -374,20 +488,8 @@ class CPU {
     pc = getOpAddress(mode)
   }
 
-  private fun stackPush(data: UByte) {
-    memWrite(sp, data)
-    sp = sp.dec()
-  }
-
-  private fun stackPush16(data: UShort) {
-    val hi = (data.toInt() shr 8).toUByte()
-    val lo = data.toUByte()
-    stackPush(hi)
-    stackPush(lo)
-  }
-
   fun jsr(mode: AddressingMode) {
-    stackPush16((pc + 2U - 1U).toUShort());
+    stackPush16((pc + 2U - 1U).toUShort())
     pc = getOpAddress(mode)
   }
 
@@ -409,15 +511,11 @@ class CPU {
   fun nop(mode: AddressingMode) = Unit
 
   fun lsr(mode: AddressingMode) {
-    var op : UByte = 0.toUByte()
-    if (mode == AddressingMode.Accumulator) {
-      op = regA
-    } else {
-      val addr = getOpAddress(mode)
-      op = memRead(addr)
-    }
-    this.status_c = op.bitIsSetAt(0)
-    updateZNAndRegA((op.toInt() shr 1).toUByte())
+    inplaceModifyAorMem(
+      mode,
+      { this.status_c = it.bitIsSetAt(7) },
+      { (it.toInt() ushr 1).toUByte() },
+      { updateZN(it) })
   }
 
   fun ora(mode: AddressingMode) {
@@ -428,6 +526,41 @@ class CPU {
 
   fun pha(mode: AddressingMode) {
     stackPush(regA);
+  }
+
+  fun php(mode: AddressingMode) {
+    // The CPU doesn't really materialize the B flag, but we still do for the ease of
+    // implementation.
+    // See also:
+    // http://wiki.nesdev.com/w/index.php/Status_flags#The_B_flag
+    status_b_hi = true
+    status_b_lo = true
+    stackPush(statusAsUByte())
+  }
+
+  fun pla(mode: AddressingMode) {
+    updateZNAndRegA(stackPop())
+  }
+
+  fun plp(mode: AddressingMode) {
+    statusFromUByte(stackPop())
+  }
+
+  fun rol(mode: AddressingMode) {
+    inplaceModifyAorMem(
+      mode,
+      { this.status_c = it.bitIsSetAt(7) },
+      { it.rotateLeft(1) },
+      { updateZN(it) })
+  }
+
+  fun ror(mode: AddressingMode) {
+    inplaceModifyAorMem(
+      mode,
+      { this.status_c = it.bitIsSetAt(7) },
+      { it.rotateRight(1) },
+      { updateZN(it) },
+    )
   }
 
   fun tax(mode: AddressingMode) {

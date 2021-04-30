@@ -148,6 +148,24 @@ val cpuOpcodes: List<Opcode> = mutableListOf<Opcode>().apply {
 
   add(Opcode(0x48, CPU::pha, 1, AddressingMode.NoneAddressing))
 
+  add(Opcode(0x08, CPU::php, 1, AddressingMode.NoneAddressing))
+
+  add(Opcode(0x68, CPU::pla, 1, AddressingMode.NoneAddressing))
+
+  add(Opcode(0x28, CPU::plp, 1, AddressingMode.NoneAddressing))
+
+  add(Opcode(0x2A, CPU::rol, 1, AddressingMode.Accumulator))
+  add(Opcode(0x26, CPU::rol, 2, AddressingMode.ZeroPage))
+  add(Opcode(0x36, CPU::rol, 2, AddressingMode.ZeroPage_X))
+  add(Opcode(0x2E, CPU::rol, 3, AddressingMode.Absolute))
+  add(Opcode(0x3E, CPU::rol, 3, AddressingMode.Absolute_X))
+
+  add(Opcode(0x6A, CPU::ror, 1, AddressingMode.Accumulator))
+  add(Opcode(0x66, CPU::ror, 2, AddressingMode.ZeroPage))
+  add(Opcode(0x76, CPU::ror, 2, AddressingMode.ZeroPage_X))
+  add(Opcode(0x6E, CPU::ror, 3, AddressingMode.Absolute))
+  add(Opcode(0x7E, CPU::ror, 3, AddressingMode.Absolute_X))
+
   add(Opcode(0x85, CPU::sta, 2, AddressingMode.ZeroPage))
   add(Opcode(0x95, CPU::sta, 2, AddressingMode.ZeroPage_X))
   add(Opcode(0x8D, CPU::sta, 3, AddressingMode.Absolute))
@@ -155,6 +173,4 @@ val cpuOpcodes: List<Opcode> = mutableListOf<Opcode>().apply {
   add(Opcode(0x99, CPU::sta, 3, AddressingMode.Absolute_Y))
   add(Opcode(0x81, CPU::sta, 2, AddressingMode.Indirect_X))
   add(Opcode(0x91, CPU::sta, 2, AddressingMode.Indirect_Y))
-
-
 }

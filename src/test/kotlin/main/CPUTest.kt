@@ -8,6 +8,7 @@ public class CPUTest {
   fun uByteListOf(vararg elements: Int): List<UByte> {
     return elements.map(Int::toUByte)
   }
+
   @Test
   fun testLDA() {
     val cpu = CPU()
@@ -295,7 +296,7 @@ public class CPUTest {
     Assert.assertEquals(false, cpu.status_v)
   }
 
-  fun testCompareInternal(cpu: CPU, op : Int) {
+  fun testCompareInternal(cpu: CPU, op: Int) {
     cpu.mem[0x0] = 0b0100_0000.toUByte()
     cpu.execute(uByteListOf(op, 0x00, 0x00), false)
     Assert.assertEquals(true, cpu.status_c)
@@ -397,6 +398,7 @@ public class CPUTest {
     // BRK after 0x02.
     cpu.mem[0x03] = 0x00.toUByte()
     cpu.mem[0x00] = 0x02.toUByte()
+    cpu.mem[0x01] = 0x00.toUByte()
     cpu.execute(uByteListOf(0x6C, 0x00, 0x00), false)
     Assert.assertEquals(0b0000_0010.toUByte(), cpu.regA)
   }
@@ -441,5 +443,58 @@ public class CPUTest {
     Assert.assertEquals(cpu.regY, 0x00.toUByte())
     Assert.assertEquals(cpu.status_n, false)
     Assert.assertEquals(cpu.status_z, true)
+  }
+
+  @Test
+  fun testLSR() {
+    val cpu = CPU()
+    cpu.regA = 0b0100_0000.toUByte()
+    cpu.execute(uByteListOf(0x4A, 0x00), false)
+    Assert.assertEquals(0b0010_0000.toUByte(), cpu.regA)
+    Assert.assertEquals(false, cpu.status_c)
+  }
+
+  @Test
+  fun testORA() {
+    val cpu = CPU()
+    cpu.regA = 0x01.toUByte()
+    cpu.execute(uByteListOf(0x09, 0x10, 0x00), false)
+    Assert.assertEquals(0x11.toUByte(), cpu.regA)
+  }
+
+
+  @Test
+  fun testPHPPLA() {
+    // Push status into stack and pull it into A.
+    // See http://wiki.nesdev.com/w/index.php/Status_flags#The_B_flag
+    val cpu = CPU()
+    cpu.status_n = true
+    cpu.execute(uByteListOf(0x08, 0x68), false)
+    Assert.assertEquals(0xB0.toUByte(), cpu.regA)
+  }
+
+  @Test
+  fun testPHAPLP() {
+    // Reverse of testPHPPLA
+    val cpu = CPU()
+    cpu.regA = 0xB0u
+    cpu.execute(uByteListOf(0x48, 0x28), false)
+    Assert.assertEquals(true, cpu.status_n)
+  }
+
+  @Test
+  fun testROL() {
+    val cpu = CPU()
+    cpu.regA = 0b1100_0001.toUByte()
+    cpu.execute(uByteListOf(0x2A, 0x00), false)
+    Assert.assertEquals(0b1000_0011.toUByte(), cpu.regA)
+  }
+
+  @Test
+  fun testROR() {
+    val cpu = CPU()
+    cpu.regA = 0b1100_0001.toUByte()
+    cpu.execute(uByteListOf(0x6A, 0x00), false)
+    Assert.assertEquals(0b1110_0000.toUByte(), cpu.regA)
   }
 }

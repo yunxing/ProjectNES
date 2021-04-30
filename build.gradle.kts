@@ -1,9 +1,11 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
-    id("org.jetbrains.kotlin.jvm") version "1.4.32"
+    kotlin("jvm") version "1.4.32"
     application
 }
 
-application.apply {
+application {
     mainClass.set("main.CPUKt")
 }
 
@@ -21,4 +23,13 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit")
+}
+
+tasks.withType(KotlinCompile::class).all  {
+    kotlinOptions {
+        freeCompilerArgs += listOf(
+            "-Xopt-in=kotlin.ExperimentalUnsignedTypes",
+            "-Xopt-in=kotlin.ExperimentalStdlibApi",
+        )
+    }
 }
