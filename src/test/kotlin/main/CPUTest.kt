@@ -542,4 +542,15 @@ public class CPUTest {
     Assert.assertEquals(cpu.status_n, false)
     Assert.assertEquals(cpu.status_z, false)
   }
+
+  @Test
+  fun testSPTransfers() {
+    // Transfers x to sp
+    val cpu = CPU()
+    cpu.regX = 0x80u
+    cpu.execute(uByteListOf(0x9A, 0xBA, 0x00), false)
+    Assert.assertEquals(0x80u.toUByte(), cpu.sp)
+    Assert.assertEquals(0x80u.toUByte(), cpu.regX)
+    Assert.assertEquals(true, cpu.status_n)
+  }
 }

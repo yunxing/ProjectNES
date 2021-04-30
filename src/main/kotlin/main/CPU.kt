@@ -54,7 +54,12 @@ class CPU {
   var pc: UShort = 0u
 
   // Stack pointer.
-  var sp: UShort = 0x10FFu
+  var sp: UByte = 0xFFu
+  val STACK : UShort = 0x1000u
+
+  fun getStackTopAddr() : UShort {
+    return (STACK + sp).toUShort()
+  }
 
   val opTable: HashMap<UByte, Opcode> = hashMapOf<UByte, Opcode>().apply {
     for (opcode in cpuOpcodes) {
@@ -67,7 +72,7 @@ class CPU {
   }
   private fun stackPush(data: UByte) {
     println("push stack %8s".format(Integer.toBinaryString(data.toInt())))
-    memWrite(sp, data)
+    memWrite(getStackTopAddr(), data)
     sp = sp.dec()
 
   }
@@ -82,7 +87,7 @@ class CPU {
   // Pop stack and update stack pointer.
   private fun stackPop(): UByte {
     sp = sp.inc()
-    return memRead(sp)
+    return memRead(getStackTopAddr())
   }
 
   private fun stackPop16(): UShort {
@@ -620,6 +625,14 @@ class CPU {
 
   fun tay(mode: AddressingMode) {
     updateZNAndRegY(regA)
+  }
+
+  fun tsx(mode: AddressingMode) {
+    updateZNAndRegX(sp)
+  }
+
+  fun txs(mode: AddressingMode) {
+    sp = regX
   }
 }
 
