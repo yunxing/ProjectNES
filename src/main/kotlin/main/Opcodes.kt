@@ -202,4 +202,7 @@ val cpuOpcodes: List<Opcode> = mutableListOf<Opcode>().apply {
 
   add(Opcode(0xBA, CPU::tsx, 1, AddressingMode.NoneAddressing))
   add(Opcode(0x9A, CPU::txs, 1, AddressingMode.NoneAddressing))
+
+  add(Opcode(0x8A, CPU::txa, 1, AddressingMode.NoneAddressing))
+  add(Opcode(0x98, CPU::tya, 1, AddressingMode.NoneAddressing))
 }

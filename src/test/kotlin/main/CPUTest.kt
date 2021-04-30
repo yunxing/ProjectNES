@@ -545,12 +545,32 @@ public class CPUTest {
 
   @Test
   fun testSPTransfers() {
-    // Transfers x to sp
+    // Transfers x to sp.
     val cpu = CPU()
     cpu.regX = 0x80u
     cpu.execute(uByteListOf(0x9A, 0xBA, 0x00), false)
     Assert.assertEquals(0x80u.toUByte(), cpu.sp)
     Assert.assertEquals(0x80u.toUByte(), cpu.regX)
+    Assert.assertEquals(true, cpu.status_n)
+  }
+
+  @Test
+  fun testTXA() {
+    // Transfers x to sp.
+    val cpu = CPU()
+    cpu.regX = 0x80u
+    cpu.execute(uByteListOf(0x8A, 0x00), false)
+    Assert.assertEquals(0x80u.toUByte(), cpu.regA)
+    Assert.assertEquals(true, cpu.status_n)
+  }
+
+  @Test
+  fun testTYA() {
+    // Transfers x to sp.
+    val cpu = CPU()
+    cpu.regY = 0x80u
+    cpu.execute(uByteListOf(0x98, 0x00), false)
+    Assert.assertEquals(0x80u.toUByte(), cpu.regA)
     Assert.assertEquals(true, cpu.status_n)
   }
 }

@@ -634,6 +634,14 @@ class CPU {
   fun txs(mode: AddressingMode) {
     sp = regX
   }
+
+  fun txa(mode: AddressingMode) {
+    updateZNAndRegA(regX)
+  }
+
+  fun tya(mode: AddressingMode) {
+    updateZNAndRegA(regY)
+  }
 }
 
 fun main() {
