@@ -63,15 +63,14 @@ class CPU {
 
   val opTable: HashMap<UByte, Opcode> = hashMapOf<UByte, Opcode>().apply {
     for (opcode in cpuOpcodes) {
-      assert(
+      check(
         put(opcode.opcode, opcode) == null
       ) {
-        "Opcode %04X already exists".format(opcode.opcode.toInt())
+        "Opcode already exists: " + opcode.opcode.toString(16)
       }
     }
   }
   private fun stackPush(data: UByte) {
-    println("push stack %8s".format(Integer.toBinaryString(data.toInt())))
     memWrite(getStackTopAddr(), data)
     sp = sp.dec()
 
@@ -258,7 +257,6 @@ class CPU {
       AddressingMode.Indirect -> {
         val base = memRead16(pc)
         val result = memRead16Wrapped(base)
-        println("Base %4X".format(result.toInt()))
         result
       }
       AddressingMode.Indirect_X -> {
@@ -296,16 +294,15 @@ class CPU {
         return
       }
       val op = opTable[opcode]
-      if (op != null) {
-        op.handler(this, op.mode)
-        // Not a branch instruction, update pc.
-        if (pcBefore == pc) {
-          // The pc has already been incremented before execution, account for that and update by
-          // op.bytes - 1.
-          ::pc.incBy(op.bytes.toInt() - 1)
-        }
-      } else {
-        TODO("Unknown op code: %04X".format(opcode.toInt()))
+      check (op != null) {
+        "Unknown op code:" + opcode.toString(16)
+      }
+      op.handler(this, op.mode)
+      // Not a branch instruction, update pc.
+      if (pcBefore == pc) {
+        // The pc has already been incremented before execution, account for that and update by
+        // op.bytes - 1.
+        ::pc.incBy(op.bytes.toInt() - 1)
       }
     }
   }
@@ -645,5 +642,5 @@ class CPU {
 }
 
 fun main() {
-
+  println("hello")
 }

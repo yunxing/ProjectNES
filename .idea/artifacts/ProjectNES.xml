@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="ProjectNES">
+    <output-path>$PROJECT_DIR$/build/libs</output-path>
+    <root id="archive" name="ProjectNES.jar">
+      <element id="module-output" name="ProjectNES.main" />
+    </root>
+  </artifact>
+</component>
