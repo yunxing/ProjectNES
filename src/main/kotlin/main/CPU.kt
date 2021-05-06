@@ -83,6 +83,9 @@ class CPU {
   var status_n: Boolean = false
   var bus = Bus()
 
+  val mem:Bus
+    get() = this.bus
+
   // Program counter.
   var pc: UShort = 0u
 
