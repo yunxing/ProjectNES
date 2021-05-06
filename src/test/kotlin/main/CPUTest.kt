@@ -405,13 +405,15 @@ public class CPUTest {
   fun testJMPPageBoundary() {
     val cpu = CPU()
     cpu.regA = 0b0000_0001.toUByte()
-    cpu.mem[0x3000] = 0x40.toUByte()
+    cpu.mem[0x1000] = 0x10.toUByte()
     // BRK after 0x02.
-    cpu.mem[0x30FF] = 0x80.toUByte()
-    cpu.mem[0x3100] = 0x50.toUByte()
-    cpu.mem[0x4080] = 0x0A.toUByte()
-    cpu.mem[0x4081] = 0x00.toUByte()
-    cpu.execute(uByteListOf(0x6C, 0xFF, 0x30), false)
+    cpu.mem[0x10FF] = 0x80.toUByte()
+    cpu.mem[0x1100] = 0x11.toUByte()
+
+    // Expected jump location
+    cpu.mem[0x1080] = 0x0A.toUByte()
+    cpu.mem[0x1081] = 0x00.toUByte()
+    cpu.execute(uByteListOf(0x6C, 0xFF, 0x10), false)
     assertEquals(0b0000_0010.toUByte(), cpu.regA)
   }
 

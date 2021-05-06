@@ -4,7 +4,8 @@ import kotlin.reflect.KMutableProperty0
 
 
 fun vlog(msg:String) {
-  if (true) {
+  val debug = true
+  if (debug) {
     println(msg)
   }
 }
@@ -80,7 +81,7 @@ class CPU {
   var status_b_lo: Boolean = false
   var status_v: Boolean = false
   var status_n: Boolean = false
-  var mem = UByteArray(0xFFFF)
+  var bus = Bus()
 
   // Program counter.
   var pc: UShort = 0u
@@ -106,7 +107,7 @@ class CPU {
   // Public version of memory read, needed for js interop.
   @JsName("memRead")
   fun memRead(pos: Int): Int {
-    return mem[pos].toInt()
+    return bus.memRead(pos.toUShort()).toInt()
   }
 
   private fun stackPush(data: UByte) {
@@ -188,12 +189,12 @@ class CPU {
   }
 
   private fun memRead(addr: UShort): UByte {
-    return mem[addr.toInt()]
+    return bus.memRead(addr)
   }
 
   fun memRead16(addr: UShort): UShort {
-    val lo = memRead(addr).toUShort()
-    val hi = memRead(addr.inc()).toUShort()
+    val lo = bus.memRead(addr).toUShort()
+    val hi = bus.memRead(addr.inc()).toUShort()
     return ((hi.toInt() shl 8) or (lo.toInt())).toUShort()
   }
 
@@ -244,8 +245,7 @@ class CPU {
   }
 
   fun memWrite(addr: UShort, data: UByte) {
-    println("memory write : address " + addr.toString(16) + " value " + data.toString(16))
-    mem[addr.toInt()] = data
+    bus.memWrite(addr, data)
   }
 
   fun memWrite16(addr: UShort, data: UShort) {
@@ -260,7 +260,7 @@ class CPU {
     // Program start address. The snake is 0x0600 while regular NES programs are 0x8000
     var i = programStart
     for (b in program.toList()) {
-      mem[i.toInt()] = b
+      bus.memWrite(i, b)
       i = i.inc()
     }
     memWrite16(0xFFFC.toUShort(), programStart)
