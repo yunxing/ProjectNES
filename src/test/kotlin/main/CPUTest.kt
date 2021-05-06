@@ -5,9 +5,7 @@ import kotlin.test.assertEquals
 
 @ExperimentalUnsignedTypes
 public class CPUTest {
-  fun uByteListOf(vararg elements: Int): List<UByte> {
-    return elements.map(Int::toUByte)
-  }
+
 
   @Test
   fun testLDA() {
@@ -175,7 +173,7 @@ public class CPUTest {
     val cpu = CPU()
     cpu.regA = 0b0000_0001.toUByte()
     cpu.status_c = true
-    cpu.execute(uByteListOf(0x90, 0x03, 0x0A, 0x0A, 0x00), false)
+    cpu.execute(uByteListOf(0x90, 0x01, 0x0A, 0x0A, 0x00), false)
     // Skipped one shift, but should have done another shift.
     assertEquals(0b0000_0010.toUByte(), cpu.regA)
   }
@@ -195,7 +193,7 @@ public class CPUTest {
     val cpu = CPU()
     cpu.regA = 0b0000_0001.toUByte()
     cpu.status_c = false
-    cpu.execute(uByteListOf(0xB0, 0x03, 0x0A, 0x0A, 0x00), false)
+    cpu.execute(uByteListOf(0xB0, 0x01, 0x0A, 0x0A, 0x00), false)
     // Skipped one shift, but should have done another shift.
     assertEquals(0b0000_0010.toUByte(), cpu.regA)
   }
@@ -205,7 +203,7 @@ public class CPUTest {
     val cpu = CPU()
     cpu.regA = 0b0000_0001.toUByte()
     cpu.status_c = true
-    cpu.execute(uByteListOf(0xB0, 0x03, 0x0A, 0x0A, 0x00), false)
+    cpu.execute(uByteListOf(0xB0, 0x01, 0x0A, 0x0A, 0x00), false)
     // Not doing branch.
     assertEquals(0b0000_0100.toUByte(), cpu.regA)
   }
@@ -215,7 +213,7 @@ public class CPUTest {
     val cpu = CPU()
     cpu.regA = 0b0000_0001.toUByte()
     cpu.status_z = true
-    cpu.execute(uByteListOf(0xF0, 0x03, 0x0A, 0x0A, 0x00), false)
+    cpu.execute(uByteListOf(0xF0, 0x01, 0x0A, 0x0A, 0x00), false)
     // Skipped one shift, but should have done another shift.
     assertEquals(0b0000_0010.toUByte(), cpu.regA)
   }
@@ -234,7 +232,7 @@ public class CPUTest {
     val cpu = CPU()
     cpu.regA = 0b0000_0001.toUByte()
     cpu.status_n = true
-    cpu.execute(uByteListOf(0x30, 0x03, 0x0A, 0x0A, 0x00), false)
+    cpu.execute(uByteListOf(0x30, 0x01, 0x0A, 0x0A, 0x00), false)
     // Skipped one shift, but should have done another shift.
     assertEquals(0b0000_0010.toUByte(), cpu.regA)
   }
@@ -244,7 +242,7 @@ public class CPUTest {
     val cpu = CPU()
     cpu.regA = 0b0000_0001.toUByte()
     cpu.status_z = false
-    cpu.execute(uByteListOf(0xD0, 0x03, 0x0A, 0x0A, 0x00), false)
+    cpu.execute(uByteListOf(0xD0, 0x01, 0x0A, 0x0A, 0x00), false)
     // Skipped one shift, but should have done another shift.
     assertEquals(0b0000_0010.toUByte(), cpu.regA)
   }
@@ -254,7 +252,7 @@ public class CPUTest {
     val cpu = CPU()
     cpu.regA = 0b0000_0001.toUByte()
     cpu.status_n = false
-    cpu.execute(uByteListOf(0x10, 0x03, 0x0A, 0x0A, 0x00), false)
+    cpu.execute(uByteListOf(0x10, 0x01, 0x0A, 0x0A, 0x00), false)
     assertEquals(0b0000_0010.toUByte(), cpu.regA)
   }
 
@@ -263,7 +261,7 @@ public class CPUTest {
     val cpu = CPU()
     cpu.regA = 0b0000_0001.toUByte()
     cpu.status_v = false
-    cpu.execute(uByteListOf(0x50, 0x03, 0x0A, 0x0A, 0x00), false)
+    cpu.execute(uByteListOf(0x50, 0x01, 0x0A, 0x0A, 0x00), false)
     assertEquals(0b0000_0010.toUByte(), cpu.regA)
   }
 
@@ -272,7 +270,7 @@ public class CPUTest {
     val cpu = CPU()
     cpu.regA = 0b0000_0001.toUByte()
     cpu.status_v = true
-    cpu.execute(uByteListOf(0x70, 0x03, 0x0A, 0x0A, 0x00), false)
+    cpu.execute(uByteListOf(0x70, 0x01, 0x0A, 0x0A, 0x00), false)
     assertEquals(0b0000_0010.toUByte(), cpu.regA)
   }
 
@@ -422,9 +420,9 @@ public class CPUTest {
     val cpu = CPU()
     cpu.mem[0x0001] = 0x00.toUByte()
     cpu.execute(uByteListOf(0x20, 0x01, 0x00), false)
-    assertEquals(0x80.toUByte(), cpu.mem[0x10FF])
-    assertEquals(0x02.toUByte(), cpu.mem[0x10FE])
-    assertEquals(0x10FD.toUShort(), cpu.sp)
+    assertEquals(cpu.programStart.highByte(), cpu.mem[0x10FF])
+    assertEquals((cpu.programStart.lowByte() + 2u).toUByte(), cpu.mem[0x10FE])
+    assertEquals(0xFD.toUByte(), cpu.sp)
   }
 
   @Test

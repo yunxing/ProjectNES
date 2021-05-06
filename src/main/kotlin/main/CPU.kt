@@ -2,11 +2,38 @@ package main
 
 import kotlin.reflect.KMutableProperty0
 
+
+fun vlog(msg:String) {
+  if (true) {
+    println(msg)
+  }
+}
+
 @ExperimentalUnsignedTypes
 fun UByte.bitIsSetAt(bit: Int): Boolean {
   val mask = (0b1 shl bit)
   return this.toInt() and mask != 0
 }
+
+@ExperimentalUnsignedTypes
+fun UShort.highByte(): UByte {
+  vlog("high byte:" + this.toHex())
+  return (this.toInt() shr 8).toUByte()
+}
+
+fun UShort.lowByte(): UByte {
+  return (this.toInt() and 0x00FF).toUByte()
+}
+
+fun UShort.toHex(): String {
+  return "0x" + this.toString(16).padStart(4, '0')
+}
+
+@ExperimentalUnsignedTypes
+fun UByte.toHex(): String {
+  return this.toUShort().toHex()
+}
+
 
 @ExperimentalUnsignedTypes
 fun Boolean.toUShort() = if (this) 1.toUShort() else 0.toUShort()
@@ -17,6 +44,10 @@ fun KMutableProperty0<UShort>.incBy(amount: Int) {
   for (i in 1..amount) {
     set(get().inc())
   }
+}
+
+fun uByteListOf(vararg elements: Int): List<UByte> {
+  return elements.map(Int::toUByte)
 }
 
 enum class AddressingMode {
@@ -37,6 +68,7 @@ enum class AddressingMode {
 
 @OptIn(ExperimentalStdlibApi::class, ExperimentalUnsignedTypes::class)
 class CPU {
+  val name = "cpu"
   var regA: UByte = 0.toUByte()
   var regX: UByte = 0.toUByte()
   var regY: UByte = 0.toUByte()
@@ -55,9 +87,9 @@ class CPU {
 
   // Stack pointer.
   var sp: UByte = 0xFFu
-  val STACK : UShort = 0x1000u
+  val STACK: UShort = 0x1000u
 
-  fun getStackTopAddr() : UShort {
+  fun getStackTopAddr(): UShort {
     return (STACK + sp).toUShort()
   }
 
@@ -70,10 +102,16 @@ class CPU {
       }
     }
   }
+
+  // Public version of memory read, needed for js interop.
+  @JsName("memRead")
+  fun memRead(pos: Int): Int {
+    return mem[pos].toInt()
+  }
+
   private fun stackPush(data: UByte) {
     memWrite(getStackTopAddr(), data)
     sp = sp.dec()
-
   }
 
   private fun stackPush16(data: UShort) {
@@ -163,7 +201,13 @@ class CPU {
   fun memRead16Wrapped(addr: UShort): UShort {
     val lo = memRead(addr)
     val wrapped = (addr.inc() and 0x00FFu) == 0.toUShort()
-    val hi = memRead(if (wrapped) {addr and 0xFF00u} else {addr.inc()})
+    val hi = memRead(
+      if (wrapped) {
+        addr and 0xFF00u
+      } else {
+        addr.inc()
+      }
+    )
     return ((hi.toInt() shl 8) or (lo.toInt())).toUShort()
   }
 
@@ -200,6 +244,7 @@ class CPU {
   }
 
   fun memWrite(addr: UShort, data: UByte) {
+    println("memory write : address " + addr.toString(16) + " value " + data.toString(16))
     mem[addr.toInt()] = data
   }
 
@@ -210,13 +255,16 @@ class CPU {
     memWrite(addr.inc(), hi)
   }
 
+  val programStart : UShort = 0x0600.toUShort()
   fun load(program: List<UByte>) {
-    var i = 0x8000
-    for (b in program) {
-      mem[i] = b
-      i += 1
+    // Program start address. The snake is 0x0600 while regular NES programs are 0x8000
+    var i = programStart
+    for (b in program.toList()) {
+      mem[i.toInt()] = b
+      i = i.inc()
     }
-    memWrite16(0xFFFC.toUShort(), 0x8000.toUShort())
+    memWrite16(0xFFFC.toUShort(), programStart)
+    pc = memRead16(0xFFFC.toUShort())
   }
 
   fun reset() {
@@ -239,14 +287,14 @@ class CPU {
     if (resetState) {
       reset()
     }
-    pc = memRead16(0xFFFC.toUShort())
     run()
   }
 
   fun getOpAddress(mode: AddressingMode): UShort {
     return when (mode) {
       AddressingMode.Immediate -> pc
-      AddressingMode.Relative -> (pc - 1U + memRead(pc)).toUShort()
+      // Relative jump can go back in space, so use signed arithmetics.
+      AddressingMode.Relative -> (pc.toShort() + 1 + memRead(pc).toByte()).toUShort()
       AddressingMode.ZeroPage -> memRead(pc).toUShort()
       AddressingMode.Absolute -> memRead16(pc)
       // Additional toUByte conversions are needed to wrap in zero page space.
@@ -280,30 +328,37 @@ class CPU {
     // Companion objects can also have names.
 
   }
+  @JsName("tick")
+  fun tick(): Boolean {
+    val opcode = memRead(pc)
+    vlog("opcode:" + opcode.toHex())
+    pc = pc.inc()
+    // Used to check if branch instruction is called.
+    val pcBefore = pc
+    if (opcode == 0.toUByte()) {
+      status_b_hi = true
+      status_b_lo = true
+      return false
+    }
+    val op = opTable[opcode]
+    check(op != null) {
+      "Unknown op code:" + opcode.toString(16)
+    }
+    op.handler(this, op.mode)
+    // Not a branch instruction, update pc.
+    if (pcBefore == pc) {
+      // The pc has already been incremented before execution, account for that and update by
+      // op.bytes - 1.
+      ::pc.incBy(op.bytes.toInt() - 1)
+    }
+    return true
+  }
 
   private fun run() {
     println("run")
-    while (true) {
-      val opcode = memRead(pc)
-      pc = pc.inc()
-      // Used to check if branch instruction is called.
-      val pcBefore = pc
-      if (opcode == 0.toUByte()) {
-        status_b_hi = true
-        status_b_lo = true
-        return
-      }
-      val op = opTable[opcode]
-      check (op != null) {
-        "Unknown op code:" + opcode.toString(16)
-      }
-      op.handler(this, op.mode)
-      // Not a branch instruction, update pc.
-      if (pcBefore == pc) {
-        // The pc has already been incremented before execution, account for that and update by
-        // op.bytes - 1.
-        ::pc.incBy(op.bytes.toInt() - 1)
-      }
+    var shouldContinue = true
+    while (shouldContinue) {
+      shouldContinue = tick()
     }
   }
 
@@ -371,8 +426,12 @@ class CPU {
   }
 
   fun beq(mode: AddressingMode) {
+    println("beq")
     if (status_z) {
+      println("beq jump")
       pc = getOpAddress(mode)
+    } else {
+      println("beq no jump")
     }
   }
 
@@ -391,14 +450,22 @@ class CPU {
   }
 
   fun bne(mode: AddressingMode) {
+    //println("bne")
     if (!status_z) {
+      //println("bne jump")
       pc = getOpAddress(mode)
+    } else {
+      println("bne no jump")
     }
   }
 
   fun bpl(mode: AddressingMode) {
+    println("bpl")
     if (!status_n) {
+      println("bpl jump")
       pc = getOpAddress(mode)
+    } else {
+      println("bpl no jump")
     }
   }
 
@@ -484,6 +551,7 @@ class CPU {
 
   // avoiding jvm name collision
   fun inxFun(mode: AddressingMode) {
+    println("inx")
     updateZNAndRegX(regX.inc())
   }
 
@@ -492,15 +560,18 @@ class CPU {
   }
 
   fun jmp(mode: AddressingMode) {
+    println("jmp")
     pc = getOpAddress(mode)
   }
 
   fun jsr(mode: AddressingMode) {
+    println("jsr")
     stackPush16((pc + 2U - 1U).toUShort())
     pc = getOpAddress(mode)
   }
 
   fun lda(mode: AddressingMode) {
+    println("lda")
     val addr = getOpAddress(mode)
     updateZNAndRegA(memRead(addr))
   }
@@ -576,6 +647,7 @@ class CPU {
   }
 
   fun rts(mode: AddressingMode) {
+    println("rts")
     // In our implementation we increment pc before each instruction. RTS expects pc to be increment
     // after each instruction. Use an additional +1 to account for the difference here.
     pc = (stackPop16() + 1u).toUShort()
@@ -639,8 +711,323 @@ class CPU {
   fun tya(mode: AddressingMode) {
     updateZNAndRegA(regY)
   }
+
+  fun loadTestProgram() {
+    load(
+      uByteListOf(
+        0x20,
+        0x06,
+        0x06,
+        0x20,
+        0x38,
+        0x06,
+        0x20,
+        0x0d,
+        0x06,
+        0x20,
+        0x2a,
+        0x06,
+        0x60,
+        0xa9,
+        0x02,
+        0x85,
+        0x02,
+        0xa9,
+        0x04,
+        0x85,
+        0x03,
+        0xa9,
+        0x11,
+        0x85,
+        0x10,
+        0xa9,
+        0x10,
+        0x85,
+        0x12,
+        0xa9,
+        0x0f,
+        0x85,
+        0x14,
+        0xa9,
+        0x04,
+        0x85,
+        0x11,
+        0x85,
+        0x13,
+        0x85,
+        0x15,
+        0x60,
+        0xa5,
+        0xfe,
+        0x85,
+        0x00,
+        0xa5,
+        0xfe,
+        0x29,
+        0x03,
+        0x18,
+        0x69,
+        0x02,
+        0x85,
+        0x01,
+        0x60,
+        0x20,
+        0x4d,
+        0x06,
+        0x20,
+        0x8d,
+        0x06,
+        0x20,
+        0xc3,
+        0x06,
+        0x20,
+        0x19,
+        0x07,
+        0x20,
+        0x20,
+        0x07,
+        0x20,
+        0x2d,
+        0x07,
+        0x4c,
+        0x38,
+        0x06,
+        0xa5,
+        0xff,
+        0xc9,
+        0x77,
+        0xf0,
+        0x0d,
+        0xc9,
+        0x64,
+        0xf0,
+        0x14,
+        0xc9,
+        0x73,
+        0xf0,
+        0x1b,
+        0xc9,
+        0x61,
+        0xf0,
+        0x22,
+        0x60,
+        0xa9,
+        0x04,
+        0x24,
+        0x02,
+        0xd0,
+        0x26,
+        0xa9,
+        0x01,
+        0x85,
+        0x02,
+        0x60,
+        0xa9,
+        0x08,
+        0x24,
+        0x02,
+        0xd0,
+        0x1b,
+        0xa9,
+        0x02,
+        0x85,
+        0x02,
+        0x60,
+        0xa9,
+        0x01,
+        0x24,
+        0x02,
+        0xd0,
+        0x10,
+        0xa9,
+        0x04,
+        0x85,
+        0x02,
+        0x60,
+        0xa9,
+        0x02,
+        0x24,
+        0x02,
+        0xd0,
+        0x05,
+        0xa9,
+        0x08,
+        0x85,
+        0x02,
+        0x60,
+        0x60,
+        0x20,
+        0x94,
+        0x06,
+        0x20,
+        0xa8,
+        0x06,
+        0x60,
+        0xa5,
+        0x00,
+        0xc5,
+        0x10,
+        0xd0,
+        0x0d,
+        0xa5,
+        0x01,
+        0xc5,
+        0x11,
+        0xd0,
+        0x07,
+        0xe6,
+        0x03,
+        0xe6,
+        0x03,
+        0x20,
+        0x2a,
+        0x06,
+        0x60,
+        0xa2,
+        0x02,
+        0xb5,
+        0x10,
+        0xc5,
+        0x10,
+        0xd0,
+        0x06,
+        0xb5,
+        0x11,
+        0xc5,
+        0x11,
+        0xf0,
+        0x09,
+        0xe8,
+        0xe8,
+        0xe4,
+        0x03,
+        0xf0,
+        0x06,
+        0x4c,
+        0xaa,
+        0x06,
+        0x4c,
+        0x35,
+        0x07,
+        0x60,
+        0xa6,
+        0x03,
+        0xca,
+        0x8a,
+        0xb5,
+        0x10,
+        0x95,
+        0x12,
+        0xca,
+        0x10,
+        0xf9,
+        0xa5,
+        0x02,
+        0x4a,
+        0xb0,
+        0x09,
+        0x4a,
+        0xb0,
+        0x19,
+        0x4a,
+        0xb0,
+        0x1f,
+        0x4a,
+        0xb0,
+        0x2f,
+        0xa5,
+        0x10,
+        0x38,
+        0xe9,
+        0x20,
+        0x85,
+        0x10,
+        0x90,
+        0x01,
+        0x60,
+        0xc6,
+        0x11,
+        0xa9,
+        0x01,
+        0xc5,
+        0x11,
+        0xf0,
+        0x28,
+        0x60,
+        0xe6,
+        0x10,
+        0xa9,
+        0x1f,
+        0x24,
+        0x10,
+        0xf0,
+        0x1f,
+        0x60,
+        0xa5,
+        0x10,
+        0x18,
+        0x69,
+        0x20,
+        0x85,
+        0x10,
+        0xb0,
+        0x01,
+        0x60,
+        0xe6,
+        0x11,
+        0xa9,
+        0x06,
+        0xc5,
+        0x11,
+        0xf0,
+        0x0c,
+        0x60,
+        0xc6,
+        0x10,
+        0xa5,
+        0x10,
+        0x29,
+        0x1f,
+        0xc9,
+        0x1f,
+        0xf0,
+        0x01,
+        0x60,
+        0x4c,
+        0x35,
+        0x07,
+        0xa0,
+        0x00,
+        0xa5,
+        0xfe,
+        0x91,
+        0x00,
+        0x60,
+        0xa6,
+        0x03,
+        0xa9,
+        0x00,
+        0x81,
+        0x10,
+        0xa2,
+        0x00,
+        0xa9,
+        0x01,
+        0x81,
+        0x10,
+        0x60,
+        0xa2,
+        0x00,
+        0xea,
+        0xea,
+        0xca,
+        0xd0,
+        0xfb,
+        0x60
+      )
+    )
+  }
 }
 
 fun main() {
-  println("hello")
 }
