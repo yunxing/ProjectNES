@@ -5,7 +5,6 @@ var canvasHeight = canvas.height;
 var ctx = canvas.getContext("2d");
 ctx.scale(10, 10);
 var canvasData = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
-
 // That's how you define the value of a pixel //
 function drawPixel (x, y, r, g, b, a) {
     var index = (x + y * canvasWidth) * 4;
@@ -29,8 +28,33 @@ console.log(cpu.name)
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+async function loadUrl(path) {
+  return new Promise((resolve, reject) => {
+    var request = new XMLHttpRequest();
+    request.open('GET', path, true);
+    request.responseType = 'blob';
+    request.onload = function() {
+      resolve(request.response)
+    };
+    request.send();
+  });
+};
 
+async function readFile(path) {
+    let blob = await loadUrl(path)
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = res => {
+        resolve(res.target.result);
+      };
+      reader.onerror = err => reject(err);
+      reader.readAsArrayBuffer(blob);
+    });
+  }
 async function demo() {
+  let rom = await readFile("snake.nes");
+  console.log(rom)
+  return;
   let cpu = new ProjectNES.main.CPU()
   cpu.loadTestProgram()
   let should_continue = true;
