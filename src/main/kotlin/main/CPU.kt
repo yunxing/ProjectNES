@@ -2,6 +2,8 @@ package main
 
 import kotlin.reflect.KMutableProperty0
 
+import kotlin.js.*
+
 @OptIn(ExperimentalStdlibApi::class, ExperimentalUnsignedTypes::class)
 class CPU {
   val name = "cpu"
@@ -18,7 +20,8 @@ class CPU {
   var status_n: Boolean = false
   var bus = Bus()
 
-  val mem:Bus
+
+  val mem: Bus
     get() = this.bus
 
   // Program counter.
@@ -126,7 +129,7 @@ class CPU {
     }
   }
 
-  private fun memRead(addr: UShort): UByte {
+  internal fun memRead(addr: UShort): UByte {
     return bus.memRead(addr)
   }
 
@@ -193,7 +196,7 @@ class CPU {
     memWrite(addr.inc(), hi)
   }
 
-  val programStart : UShort = 0x0600.toUShort()
+  val programStart: UShort = 0x0600.toUShort()
   fun load(program: List<UByte>) {
     // Program start address. The snake is 0x0600 while regular NES programs are 0x8000
     var i = programStart
@@ -266,9 +269,11 @@ class CPU {
     // Companion objects can also have names.
 
   }
+
   @JsName("tick")
   fun tick(): Boolean {
     val opcode = memRead(pc)
+    vlog(this.takeTrace())
     vlog("opcode:" + opcode.toHex())
     pc = pc.inc()
     // Used to check if branch instruction is called.
@@ -292,7 +297,12 @@ class CPU {
     return true
   }
 
-  private fun run() {
+  fun loadROM(rom: ROM) {
+    bus.rom = rom
+    pc = memRead16(0xFFFC.toUShort())
+  }
+
+  internal fun run() {
     println("run")
     var shouldContinue = true
     while (shouldContinue) {
@@ -352,13 +362,13 @@ class CPU {
   }
 
   fun bcc(mode: AddressingMode) {
-    if (status_c) {
+    if (!status_c) {
       pc = getOpAddress(mode)
     }
   }
 
   fun bcs(mode: AddressingMode) {
-    if (!status_c) {
+    if (status_c) {
       pc = getOpAddress(mode)
     }
   }
@@ -375,10 +385,11 @@ class CPU {
 
   fun bit(mode: AddressingMode) {
     val addr = getOpAddress(mode)
-    val op = memRead(addr)
-    val result = regA and op
+    val memValue = memRead(addr)
+    val result = regA and memValue
     updateZN(result)
-    status_v = result.bitIsSetAt(6)
+    status_v = memValue.bitIsSetAt(6)
+    status_n = memValue.bitIsSetAt(7)
   }
 
   fun bmi(mode: AddressingMode) {
@@ -388,22 +399,16 @@ class CPU {
   }
 
   fun bne(mode: AddressingMode) {
-    //println("bne")
     if (!status_z) {
-      //println("bne jump")
       pc = getOpAddress(mode)
     } else {
-      println("bne no jump")
     }
   }
 
   fun bpl(mode: AddressingMode) {
-    println("bpl")
     if (!status_n) {
-      println("bpl jump")
       pc = getOpAddress(mode)
     } else {
-      println("bpl no jump")
     }
   }
 
@@ -649,323 +654,23 @@ class CPU {
   fun tya(mode: AddressingMode) {
     updateZNAndRegA(regY)
   }
-
-  fun loadTestProgram() {
-    load(
-      uByteListOf(
-        0x20,
-        0x06,
-        0x06,
-        0x20,
-        0x38,
-        0x06,
-        0x20,
-        0x0d,
-        0x06,
-        0x20,
-        0x2a,
-        0x06,
-        0x60,
-        0xa9,
-        0x02,
-        0x85,
-        0x02,
-        0xa9,
-        0x04,
-        0x85,
-        0x03,
-        0xa9,
-        0x11,
-        0x85,
-        0x10,
-        0xa9,
-        0x10,
-        0x85,
-        0x12,
-        0xa9,
-        0x0f,
-        0x85,
-        0x14,
-        0xa9,
-        0x04,
-        0x85,
-        0x11,
-        0x85,
-        0x13,
-        0x85,
-        0x15,
-        0x60,
-        0xa5,
-        0xfe,
-        0x85,
-        0x00,
-        0xa5,
-        0xfe,
-        0x29,
-        0x03,
-        0x18,
-        0x69,
-        0x02,
-        0x85,
-        0x01,
-        0x60,
-        0x20,
-        0x4d,
-        0x06,
-        0x20,
-        0x8d,
-        0x06,
-        0x20,
-        0xc3,
-        0x06,
-        0x20,
-        0x19,
-        0x07,
-        0x20,
-        0x20,
-        0x07,
-        0x20,
-        0x2d,
-        0x07,
-        0x4c,
-        0x38,
-        0x06,
-        0xa5,
-        0xff,
-        0xc9,
-        0x77,
-        0xf0,
-        0x0d,
-        0xc9,
-        0x64,
-        0xf0,
-        0x14,
-        0xc9,
-        0x73,
-        0xf0,
-        0x1b,
-        0xc9,
-        0x61,
-        0xf0,
-        0x22,
-        0x60,
-        0xa9,
-        0x04,
-        0x24,
-        0x02,
-        0xd0,
-        0x26,
-        0xa9,
-        0x01,
-        0x85,
-        0x02,
-        0x60,
-        0xa9,
-        0x08,
-        0x24,
-        0x02,
-        0xd0,
-        0x1b,
-        0xa9,
-        0x02,
-        0x85,
-        0x02,
-        0x60,
-        0xa9,
-        0x01,
-        0x24,
-        0x02,
-        0xd0,
-        0x10,
-        0xa9,
-        0x04,
-        0x85,
-        0x02,
-        0x60,
-        0xa9,
-        0x02,
-        0x24,
-        0x02,
-        0xd0,
-        0x05,
-        0xa9,
-        0x08,
-        0x85,
-        0x02,
-        0x60,
-        0x60,
-        0x20,
-        0x94,
-        0x06,
-        0x20,
-        0xa8,
-        0x06,
-        0x60,
-        0xa5,
-        0x00,
-        0xc5,
-        0x10,
-        0xd0,
-        0x0d,
-        0xa5,
-        0x01,
-        0xc5,
-        0x11,
-        0xd0,
-        0x07,
-        0xe6,
-        0x03,
-        0xe6,
-        0x03,
-        0x20,
-        0x2a,
-        0x06,
-        0x60,
-        0xa2,
-        0x02,
-        0xb5,
-        0x10,
-        0xc5,
-        0x10,
-        0xd0,
-        0x06,
-        0xb5,
-        0x11,
-        0xc5,
-        0x11,
-        0xf0,
-        0x09,
-        0xe8,
-        0xe8,
-        0xe4,
-        0x03,
-        0xf0,
-        0x06,
-        0x4c,
-        0xaa,
-        0x06,
-        0x4c,
-        0x35,
-        0x07,
-        0x60,
-        0xa6,
-        0x03,
-        0xca,
-        0x8a,
-        0xb5,
-        0x10,
-        0x95,
-        0x12,
-        0xca,
-        0x10,
-        0xf9,
-        0xa5,
-        0x02,
-        0x4a,
-        0xb0,
-        0x09,
-        0x4a,
-        0xb0,
-        0x19,
-        0x4a,
-        0xb0,
-        0x1f,
-        0x4a,
-        0xb0,
-        0x2f,
-        0xa5,
-        0x10,
-        0x38,
-        0xe9,
-        0x20,
-        0x85,
-        0x10,
-        0x90,
-        0x01,
-        0x60,
-        0xc6,
-        0x11,
-        0xa9,
-        0x01,
-        0xc5,
-        0x11,
-        0xf0,
-        0x28,
-        0x60,
-        0xe6,
-        0x10,
-        0xa9,
-        0x1f,
-        0x24,
-        0x10,
-        0xf0,
-        0x1f,
-        0x60,
-        0xa5,
-        0x10,
-        0x18,
-        0x69,
-        0x20,
-        0x85,
-        0x10,
-        0xb0,
-        0x01,
-        0x60,
-        0xe6,
-        0x11,
-        0xa9,
-        0x06,
-        0xc5,
-        0x11,
-        0xf0,
-        0x0c,
-        0x60,
-        0xc6,
-        0x10,
-        0xa5,
-        0x10,
-        0x29,
-        0x1f,
-        0xc9,
-        0x1f,
-        0xf0,
-        0x01,
-        0x60,
-        0x4c,
-        0x35,
-        0x07,
-        0xa0,
-        0x00,
-        0xa5,
-        0xfe,
-        0x91,
-        0x00,
-        0x60,
-        0xa6,
-        0x03,
-        0xa9,
-        0x00,
-        0x81,
-        0x10,
-        0xa2,
-        0x00,
-        0xa9,
-        0x01,
-        0x81,
-        0x10,
-        0x60,
-        0xa2,
-        0x00,
-        0xea,
-        0xea,
-        0xca,
-        0xd0,
-        0xfb,
-        0x60
-      )
-    )
-  }
 }
 
-fun main() {
+fun main(args: Array<String>) {
+  args.map { println(it) }
+  println("args:")
+  println(args)
+  val fs = js("require('fs')")
+  val fileHex = fs.readFileSync(
+    "/Users/yunxing/git/ProjectNES/src/main/resources/nestest.nes",
+    "hex"
+  ) as String
+  val fileUbyte = fileHex.chunked(2).map {it.toInt(16).toUByte()}.toUByteArray()
+  val rom = ROM.create(fileUbyte)
+  val cpu = CPU()
+  cpu.loadROM(rom)
+  cpu.pc = 0xC000u
+  cpu.run()
+  // UByteArray(base64.length) {base64[it]}
+  // print(base64)
 }

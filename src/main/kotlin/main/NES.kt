@@ -25,9 +25,12 @@ fun UShort.highByte(): UByte {
 fun UShort.lowByte(): UByte {
   return (this.toInt() and 0x00FF).toUByte()
 }
+fun Int.toHex(): String {
+  return this.toString(16).padStart(4, '0').toUpperCase()
+}
 
 fun UShort.toHex(): String {
-  return "0x" + this.toString(16).padStart(4, '0')
+  return this.toString(16).padStart(4, '0').toUpperCase()
 }
 
 @ExperimentalUnsignedTypes
@@ -72,18 +75,66 @@ enum class Mirroring {
   FOUR_SCREEN
 }
 
-fun CreateROM(raw: UByteArray) {
-
+// Public version of memory read, needed for js interop.
+@JsName("runROM")
+@JsExport
+fun runROM(raw_js: ByteArray) : CPU {
+  val raw = UByteArray(raw_js.size)
+  for (i in 0 until raw_js.size) {
+    raw[i] = raw_js[i].toUByte()
+  }
+  val rom = ROM.create(raw)
+  val cpu = CPU()
+  cpu.loadROM(rom)
+  return cpu
 }
 
+@OptIn(kotlin.ExperimentalUnsignedTypes::class)
 data class ROM(val prgRom: UByteArray,
                val chrRom: UByteArray,
                val mapper: UByte,
                val screeMirroring: Mirroring) {
   companion object {
+    val NES_TAG = uByteListOf(0x4E, 0x45, 0x53, 0x1A)
+    val PRG_ROM_PAGE_SIZE = 16384;
+    val CHR_ROM_PAGE_SIZE =  8192;
     fun create(raw: UByteArray): ROM {
-      TODO("")
+      if (raw.slice(0..3).toList() != NES_TAG) {
+        TODO("Not a nes file")
+      }
+      val mapper = (raw[7] and 0b1111_0000u) or (raw[6].toInt() ushr 4).toUByte()
+      if (mapper != 0.toUByte()) {
+        TODO("Not supported mapper " + mapper.toString())
+      }
+      val inesVer = (raw[7].toInt() ushr 2).toUByte() and 0b11u
+      if (inesVer != 0.toUByte()) {
+        TODO("Not supported ines version " + inesVer.toString())
+      }
+
+      var fourScreen = raw[6] and 0b1000u != 0.toUByte()
+      var verticalMirroring = raw[6] and 0b1u != 0.toUByte()
+
+      var screeMirroring = if (fourScreen) {
+        Mirroring.FOUR_SCREEN
+      } else if (verticalMirroring) {
+        Mirroring.VERTICAL
+      } else {
+        Mirroring.HORIZONTAL
+      }
+      var prgRomSize = raw[4].toInt() * PRG_ROM_PAGE_SIZE
+      vlog("prgRomSize: " + prgRomSize.toHex())
+      var chrRomSize = raw[5].toInt() * CHR_ROM_PAGE_SIZE
+      var skipTrainer = raw[6] and 0b100u != 0.toUByte()
+      var prgRomStart = 16 + if (skipTrainer) { 512 } else { 0 }
+      var chrRomStart = prgRomStart + prgRomSize
+
+      vlog("Creating rom")
+      return ROM(raw.slice(prgRomStart until (prgRomStart + prgRomSize)).toUByteArray(),
+                 raw.slice(chrRomStart until (chrRomStart + chrRomSize)).toUByteArray(),
+                 mapper,
+                 screeMirroring)
     }
+
   }
 
 }

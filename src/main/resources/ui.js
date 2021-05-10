@@ -54,9 +54,8 @@ async function readFile(path) {
 async function demo() {
   let rom = await readFile("snake.nes");
   console.log(rom)
-  return;
-  let cpu = new ProjectNES.main.CPU()
-  cpu.loadTestProgram()
+  var uint8View = new Uint8Array(rom);
+  let cpu = ProjectNES.main.runROM(uint8View);
   let should_continue = true;
   while (should_continue) {
     await sleep(0.5)
