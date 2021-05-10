@@ -5,5 +5,8 @@ fun CPU.takeTrace() : String {
   val opcode = this.memRead(this.pc)
 
   trace += this.pc.toHex()
+  trace += " "
+
+  trace += "P:" + this.statusAsUByte().toHex()
   return trace
 }

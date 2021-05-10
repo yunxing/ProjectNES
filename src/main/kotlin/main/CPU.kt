@@ -12,7 +12,8 @@ class CPU {
   var regY: UByte = 0.toUByte()
   var status_c: Boolean = false
   var status_z: Boolean = false
-  var status_i: Boolean = false
+  // Interrupte is by default set
+  var status_i: Boolean = true
   var status_d: Boolean = false
   var status_b_hi: Boolean = false
   var status_b_lo: Boolean = false
@@ -28,7 +29,7 @@ class CPU {
   var pc: UShort = 0u
 
   // Stack pointer.
-  var sp: UByte = 0xFFu
+  var sp: UByte = 0xFDu
   val STACK: UShort = 0x1000u
 
   fun getStackTopAddr(): UShort {
@@ -76,7 +77,7 @@ class CPU {
     return ((hi.toInt() shl 8) or (lo.toInt())).toUShort()
   }
 
-  private fun statusAsUByte(): UByte {
+  internal fun statusAsUByte(): UByte {
     var result: UByte = 0u
     if (status_n) {
       result = result or 0b1000_0000u
@@ -84,10 +85,10 @@ class CPU {
     if (status_v) {
       result = result or 0b0100_0000u
     }
-    if (status_b_hi) {
+    if (true) {
       result = result or 0b0010_0000u
     }
-    if (status_b_lo) {
+    if (false) {
       result = result or 0b0001_0000u
     }
     if (status_d) {
@@ -273,8 +274,7 @@ class CPU {
   @JsName("tick")
   fun tick(): Boolean {
     val opcode = memRead(pc)
-    vlog(this.takeTrace())
-    vlog("opcode:" + opcode.toHex())
+    // vlog(this.takeTrace())
     pc = pc.inc()
     // Used to check if branch instruction is called.
     val pcBefore = pc
@@ -374,12 +374,8 @@ class CPU {
   }
 
   fun beq(mode: AddressingMode) {
-    println("beq")
     if (status_z) {
-      println("beq jump")
       pc = getOpAddress(mode)
-    } else {
-      println("beq no jump")
     }
   }
 
@@ -494,7 +490,6 @@ class CPU {
 
   // avoiding jvm name collision
   fun inxFun(mode: AddressingMode) {
-    println("inx")
     updateZNAndRegX(regX.inc())
   }
 
@@ -503,18 +498,15 @@ class CPU {
   }
 
   fun jmp(mode: AddressingMode) {
-    println("jmp")
     pc = getOpAddress(mode)
   }
 
   fun jsr(mode: AddressingMode) {
-    println("jsr")
     stackPush16((pc + 2U - 1U).toUShort())
     pc = getOpAddress(mode)
   }
 
   fun lda(mode: AddressingMode) {
-    println("lda")
     val addr = getOpAddress(mode)
     updateZNAndRegA(memRead(addr))
   }
@@ -590,7 +582,6 @@ class CPU {
   }
 
   fun rts(mode: AddressingMode) {
-    println("rts")
     // In our implementation we increment pc before each instruction. RTS expects pc to be increment
     // after each instruction. Use an additional +1 to account for the difference here.
     pc = (stackPop16() + 1u).toUShort()
@@ -657,6 +648,7 @@ class CPU {
 }
 
 fun main(args: Array<String>) {
+  return
   args.map { println(it) }
   println("args:")
   println(args)
