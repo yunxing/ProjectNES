@@ -228,6 +228,14 @@ val cpuOpcodes: List<Opcode> = mutableListOf<Opcode>().apply {
   add(Opcode(0x4B, CPU::asr, "ASR", 2, AddressingMode.Immediate))
   add(Opcode(0xCB, CPU::axs, "AXS", 2, AddressingMode.Immediate))
 
+  add(Opcode(0xC7, CPU::dcp, "DCP", 2, AddressingMode.ZeroPage))
+  add(Opcode(0xD7, CPU::dcp, "DCP", 2, AddressingMode.ZeroPage_X))
+  add(Opcode(0xCF, CPU::dcp, "DCP", 3, AddressingMode.Absolute))
+  add(Opcode(0xDF, CPU::dcp, "DCP", 3, AddressingMode.Absolute_X))
+  add(Opcode(0xDB, CPU::dcp, "DCP", 3, AddressingMode.Absolute_Y))
+  add(Opcode(0xC3, CPU::dcp, "DCP", 2, AddressingMode.Indirect_X))
+  add(Opcode(0xD3, CPU::dcp, "DCP", 2, AddressingMode.Indirect_Y))
+
   add(Opcode(0x04, CPU::dop, "DOP", 2, AddressingMode.ZeroPage))
   add(Opcode(0x14, CPU::dop, "DOP", 2, AddressingMode.ZeroPage_X))
   add(Opcode(0x34, CPU::dop, "DOP", 2, AddressingMode.ZeroPage_X))
@@ -252,6 +260,13 @@ val cpuOpcodes: List<Opcode> = mutableListOf<Opcode>().apply {
   add(Opcode(0xF3, CPU::isc, "ISC", 2, AddressingMode.Indirect_Y))
 
   add(Opcode(0xBB, CPU::lar, "LAR", 3, AddressingMode.Absolute_Y))
+
+  add(Opcode(0xA7, CPU::lax, "LAX", 2, AddressingMode.ZeroPage))
+  add(Opcode(0xB7, CPU::lax, "LAX", 2, AddressingMode.ZeroPage_Y))
+  add(Opcode(0xAF, CPU::lax, "LAX", 3, AddressingMode.Absolute))
+  add(Opcode(0xBF, CPU::lax, "LAX", 3, AddressingMode.Absolute_Y))
+  add(Opcode(0xA3, CPU::lax, "LAX", 2, AddressingMode.Indirect_X))
+  add(Opcode(0xB3, CPU::lax, "LAX", 2, AddressingMode.Indirect_Y))
 
   add(Opcode(0x27, CPU::rla, "RLA", 2, AddressingMode.ZeroPage))
   add(Opcode(0x37, CPU::rla, "RLA", 2, AddressingMode.ZeroPage_X))
@@ -288,13 +303,13 @@ val cpuOpcodes: List<Opcode> = mutableListOf<Opcode>().apply {
   add(Opcode(0x9E, CPU::shx, "SHX", 3, AddressingMode.Absolute_Y))
   add(Opcode(0x9C, CPU::shy, "SHY", 3, AddressingMode.Absolute_X))
 
-  add(Opcode(0x0C, CPU::top, "TOP", 3, AddressingMode.Absolute))
-  add(Opcode(0x1C, CPU::top, "TOP", 3, AddressingMode.Absolute_X))
-  add(Opcode(0x3C, CPU::top, "TOP", 3, AddressingMode.Absolute_X))
-  add(Opcode(0x5C, CPU::top, "TOP", 3, AddressingMode.Absolute_X))
-  add(Opcode(0x7C, CPU::top, "TOP", 3, AddressingMode.Absolute_X))
-  add(Opcode(0xDC, CPU::top, "TOP", 3, AddressingMode.Absolute_X))
-  add(Opcode(0xF4, CPU::top, "TOP", 3, AddressingMode.Absolute_X))
+  add(Opcode(0x0C, CPU::nop, "TOP", 3, AddressingMode.Absolute))
+  add(Opcode(0x1C, CPU::nop, "TOP", 3, AddressingMode.Absolute_X))
+  add(Opcode(0x3C, CPU::nop, "TOP", 3, AddressingMode.Absolute_X))
+  add(Opcode(0x5C, CPU::nop, "TOP", 3, AddressingMode.Absolute_X))
+  add(Opcode(0x7C, CPU::nop, "TOP", 3, AddressingMode.Absolute_X))
+  add(Opcode(0xDC, CPU::nop, "TOP", 3, AddressingMode.Absolute_X))
+  add(Opcode(0xFC, CPU::nop, "TOP", 3, AddressingMode.Absolute_X))
 
   add(Opcode(0x9B, CPU::xas, "XAS", 3, AddressingMode.Absolute_Y))
 }

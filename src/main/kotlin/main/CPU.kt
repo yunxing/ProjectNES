@@ -275,7 +275,7 @@ class CPU {
   @JsName("tick")
   fun tick(): Boolean {
     val opcode = memRead(pc)
-    // vlog(this.takeTrace())
+    vlog(this.takeTrace())
     pc = pc.inc()
     // Used to check if branch instruction is called.
     val pcBefore = pc
@@ -383,6 +383,13 @@ class CPU {
     val result = (x_and_a.toUInt() - data_value.toUInt()).toUByte()
     status_c = data_value <= x_and_a
     updateZNAndRegX(result)
+  }
+
+  fun dcp(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    val op = memRead(addr)
+    memWrite(addr, op.dec())
+    updateZN(op.dec())
   }
 
   fun dop(mode: AddressingMode) {
@@ -637,6 +644,12 @@ class CPU {
     updateZNAndRegA(memRead(addr))
   }
 
+  fun lax(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    updateZNAndRegA(memRead(addr))
+    updateZNAndRegX(memRead(addr))
+  }
+
   fun ldx(mode: AddressingMode) {
     val addr = getOpAddress(mode)
     updateZNAndRegX(memRead(addr))
@@ -776,7 +789,6 @@ class CPU {
 }
 
 fun main(args: Array<String>) {
-  return
   args.map { println(it) }
   println("args:")
   println(args)
