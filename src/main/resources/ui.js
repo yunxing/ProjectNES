@@ -51,26 +51,42 @@ async function readFile(path) {
       reader.readAsArrayBuffer(blob);
     });
   }
+
+function draw(cpu) {
+ for (y = 0; y < 32; y++) {
+   for (x = 0; x < 32; x++) {
+     let linear_pos = 0x200 + y * 32 + x
+     let v = cpu.memRead(linear_pos) * 100
+     drawPixel(x, y, v, v, v, 255);
+   }
+ }
+ updateCanvas();
+}
 async function demo() {
   let rom = await readFile("snake.nes");
   console.log(rom)
   var uint8View = new Uint8Array(rom);
   let cpu = ProjectNES.main.runROM(uint8View);
-  let should_continue = true;
+  var should_continue = true;
+  var frame = 0
   while (should_continue) {
-    await sleep(0.5)
-    should_continue = cpu.tick()
-    for (y = 0; y < 32; y++) {
-      for (x = 0; x < 32; x++) {
-        let linear_pos = 0x200 + y * 32 + x
-        let v = cpu.memRead(linear_pos) * 100
-        drawPixel(x, y, v, v, v, 255);
-      }
+    should_continue = cpu.tick();
+    frame ++
+    if (frame % 100 == 0) {
+      draw(cpu)
+      await sleep(0.001)
     }
-
-    updateCanvas();
   }
-  console.log('done');
+  return
+  var time = setInterval(function (){
+    var should_continue = cpu.tick();
+    draw(cpu)
+    if (!should_continue) {
+      console.log('done');
+      clearInterval(time);
+    }
+  }, 0.1);
+
 }
 
 demo()

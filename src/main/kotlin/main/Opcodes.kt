@@ -137,6 +137,12 @@ val cpuOpcodes: List<Opcode> = mutableListOf<Opcode>().apply {
   add(Opcode(0x5E, CPU::lsr, "LSR", 3, AddressingMode.Absolute_X))
 
   add(Opcode(0xEA, CPU::nop, "NOP", 1, AddressingMode.NoneAddressing))
+  add(Opcode(0x1A, CPU::nop, "NOP", 1, AddressingMode.NoneAddressing))
+  add(Opcode(0x3A, CPU::nop, "NOP", 1, AddressingMode.NoneAddressing))
+  add(Opcode(0x5A, CPU::nop, "NOP", 1, AddressingMode.NoneAddressing))
+  add(Opcode(0x7A, CPU::nop, "NOP", 1, AddressingMode.NoneAddressing))
+  add(Opcode(0xDA, CPU::nop, "NOP", 1, AddressingMode.NoneAddressing))
+  add(Opcode(0xFA, CPU::nop, "NOP", 1, AddressingMode.NoneAddressing))
 
   add(Opcode(0x09, CPU::ora, "ORA", 2, AddressingMode.Immediate))
   add(Opcode(0x05, CPU::ora, "ORA", 2, AddressingMode.ZeroPage))
@@ -171,6 +177,7 @@ val cpuOpcodes: List<Opcode> = mutableListOf<Opcode>().apply {
   add(Opcode(0x60, CPU::rts, "RTS", 1, AddressingMode.NoneAddressing))
 
   add(Opcode(0xE9, CPU::sbc, "SBC", 2, AddressingMode.Immediate))
+  add(Opcode(0xEB, CPU::sbc, "SBC", 2, AddressingMode.Immediate))
   add(Opcode(0xE5, CPU::sbc, "SBC", 2, AddressingMode.ZeroPage))
   add(Opcode(0xF5, CPU::sbc, "SBC", 2, AddressingMode.ZeroPage_X))
   add(Opcode(0xED, CPU::sbc, "SBC", 3, AddressingMode.Absolute))
@@ -207,4 +214,87 @@ val cpuOpcodes: List<Opcode> = mutableListOf<Opcode>().apply {
 
   add(Opcode(0x8A, CPU::txa, "TXA", 1, AddressingMode.NoneAddressing))
   add(Opcode(0x98, CPU::tya, "TYA", 1, AddressingMode.NoneAddressing))
+
+  add(Opcode(0x0B, CPU::aac, "AAC", 2, AddressingMode.Immediate))
+  add(Opcode(0x2B, CPU::aac, "AAC", 2, AddressingMode.Immediate))
+
+  add(Opcode(0x87, CPU::aax, "AAX", 2, AddressingMode.ZeroPage))
+  add(Opcode(0x97, CPU::aax, "AAX", 2, AddressingMode.ZeroPage_Y))
+  add(Opcode(0x83, CPU::aax, "AAX", 2, AddressingMode.Indirect_X))
+  add(Opcode(0x8F, CPU::aax, "AAX", 3, AddressingMode.Absolute))
+
+  add(Opcode(0x6B, CPU::arr, "ARR", 2, AddressingMode.Immediate))
+
+  add(Opcode(0x4B, CPU::asr, "ASR", 2, AddressingMode.Immediate))
+  add(Opcode(0xCB, CPU::axs, "AXS", 2, AddressingMode.Immediate))
+
+  add(Opcode(0x04, CPU::dop, "DOP", 2, AddressingMode.ZeroPage))
+  add(Opcode(0x14, CPU::dop, "DOP", 2, AddressingMode.ZeroPage_X))
+  add(Opcode(0x34, CPU::dop, "DOP", 2, AddressingMode.ZeroPage_X))
+  add(Opcode(0x44, CPU::dop, "DOP", 2, AddressingMode.ZeroPage))
+  add(Opcode(0x54, CPU::dop, "DOP", 2, AddressingMode.ZeroPage_X))
+  add(Opcode(0x64, CPU::dop, "DOP", 2, AddressingMode.ZeroPage))
+  add(Opcode(0x74, CPU::dop, "DOP", 2, AddressingMode.ZeroPage_X))
+  add(Opcode(0x80, CPU::dop, "DOP", 2, AddressingMode.Immediate))
+  add(Opcode(0x82, CPU::dop, "DOP", 2, AddressingMode.Immediate))
+  add(Opcode(0x89, CPU::dop, "DOP", 2, AddressingMode.Immediate))
+  add(Opcode(0xC2, CPU::dop, "DOP", 2, AddressingMode.Immediate))
+  add(Opcode(0xD4, CPU::dop, "DOP", 2, AddressingMode.ZeroPage_X))
+  add(Opcode(0xE2, CPU::dop, "DOP", 2, AddressingMode.Immediate))
+  add(Opcode(0xF4, CPU::dop, "DOP", 2, AddressingMode.ZeroPage_X))
+
+  add(Opcode(0xE7, CPU::isc, "ISC", 2, AddressingMode.ZeroPage))
+  add(Opcode(0xF7, CPU::isc, "ISC", 2, AddressingMode.ZeroPage_X))
+  add(Opcode(0xEF, CPU::isc, "ISC", 3, AddressingMode.Absolute))
+  add(Opcode(0xFF, CPU::isc, "ISC", 3, AddressingMode.Absolute_X))
+  add(Opcode(0xFB, CPU::isc, "ISC", 3, AddressingMode.Absolute_Y))
+  add(Opcode(0xE3, CPU::isc, "ISC", 2, AddressingMode.Indirect_X))
+  add(Opcode(0xF3, CPU::isc, "ISC", 2, AddressingMode.Indirect_Y))
+
+  add(Opcode(0xBB, CPU::lar, "LAR", 3, AddressingMode.Absolute_Y))
+
+  add(Opcode(0x27, CPU::rla, "RLA", 2, AddressingMode.ZeroPage))
+  add(Opcode(0x37, CPU::rla, "RLA", 2, AddressingMode.ZeroPage_X))
+  add(Opcode(0x2F, CPU::rla, "RLA", 3, AddressingMode.Absolute))
+  add(Opcode(0x3F, CPU::rla, "RLA", 3, AddressingMode.Absolute_X))
+  add(Opcode(0x3B, CPU::rla, "RLA", 3, AddressingMode.Absolute_Y))
+  add(Opcode(0x23, CPU::rla, "RLA", 2, AddressingMode.Indirect_X))
+  add(Opcode(0x33, CPU::rla, "RLA", 2, AddressingMode.Indirect_Y))
+
+  add(Opcode(0x67, CPU::rla, "RRA", 2, AddressingMode.ZeroPage))
+  add(Opcode(0x77, CPU::rla, "RRA", 2, AddressingMode.ZeroPage_X))
+  add(Opcode(0x6F, CPU::rla, "RRA", 3, AddressingMode.Absolute))
+  add(Opcode(0x7F, CPU::rla, "RRA", 3, AddressingMode.Absolute_X))
+  add(Opcode(0x7B, CPU::rla, "RRA", 3, AddressingMode.Absolute_Y))
+  add(Opcode(0x63, CPU::rla, "RRA", 2, AddressingMode.Indirect_X))
+  add(Opcode(0x73, CPU::rla, "RRA", 2, AddressingMode.Indirect_Y))
+
+  add(Opcode(0x07, CPU::slo, "SLO", 2, AddressingMode.ZeroPage))
+  add(Opcode(0x17, CPU::slo, "SLO", 2, AddressingMode.ZeroPage_X))
+  add(Opcode(0x0F, CPU::slo, "SLO", 3, AddressingMode.Absolute))
+  add(Opcode(0x1F, CPU::slo, "SLO", 3, AddressingMode.Absolute_X))
+  add(Opcode(0x1B, CPU::slo, "SLO", 3, AddressingMode.Absolute_Y))
+  add(Opcode(0x03, CPU::slo, "SLO", 2, AddressingMode.Indirect_X))
+  add(Opcode(0x13, CPU::slo, "SLO", 2, AddressingMode.Indirect_Y))
+
+  add(Opcode(0x47, CPU::sre, "SRE", 2, AddressingMode.ZeroPage))
+  add(Opcode(0x57, CPU::sre, "SRE", 2, AddressingMode.ZeroPage_X))
+  add(Opcode(0x4F, CPU::sre, "SRE", 3, AddressingMode.Absolute))
+  add(Opcode(0x5F, CPU::sre, "SRE", 3, AddressingMode.Absolute_X))
+  add(Opcode(0x5B, CPU::sre, "SRE", 3, AddressingMode.Absolute_Y))
+  add(Opcode(0x43, CPU::sre, "SRE", 2, AddressingMode.Indirect_X))
+  add(Opcode(0x53, CPU::sre, "SRE", 2, AddressingMode.Indirect_Y))
+
+  add(Opcode(0x9E, CPU::shx, "SHX", 3, AddressingMode.Absolute_Y))
+  add(Opcode(0x9C, CPU::shy, "SHY", 3, AddressingMode.Absolute_X))
+
+  add(Opcode(0x0C, CPU::top, "TOP", 3, AddressingMode.Absolute))
+  add(Opcode(0x1C, CPU::top, "TOP", 3, AddressingMode.Absolute_X))
+  add(Opcode(0x3C, CPU::top, "TOP", 3, AddressingMode.Absolute_X))
+  add(Opcode(0x5C, CPU::top, "TOP", 3, AddressingMode.Absolute_X))
+  add(Opcode(0x7C, CPU::top, "TOP", 3, AddressingMode.Absolute_X))
+  add(Opcode(0xDC, CPU::top, "TOP", 3, AddressingMode.Absolute_X))
+  add(Opcode(0xF4, CPU::top, "TOP", 3, AddressingMode.Absolute_X))
+
+  add(Opcode(0x9B, CPU::xas, "XAS", 3, AddressingMode.Absolute_Y))
 }

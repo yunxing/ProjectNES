@@ -17,6 +17,16 @@ fun UByte.bitIsSetAt(bit: Int): Boolean {
 }
 
 @ExperimentalUnsignedTypes
+fun UByte.setBitAt(bit: Int, set: Boolean): UByte {
+  val mask = (0b1 shl bit)
+  return (this or mask.toUByte()).toUByte()
+}
+
+fun UByte.shiftRight(bit: Int): UByte {
+  return (this.toUInt() shl bit).toUByte()
+}
+
+@ExperimentalUnsignedTypes
 fun UShort.highByte(): UByte {
   vlog("high byte:" + this.toHex())
   return (this.toInt() shr 8).toUByte()

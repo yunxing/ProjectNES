@@ -165,7 +165,7 @@ class CPU {
     preprocess: (UByte) -> Unit,
     modifier: (UByte) -> UByte,
     postprocess: (UByte) -> Unit,
-  ) {
+  ) : UByte {
     // Read
     var op: UByte = if (mode == AddressingMode.Accumulator) {
       regA
@@ -184,6 +184,7 @@ class CPU {
       val addr = getOpAddress(mode)
       memWrite(addr, result)
     }
+    return result
   }
 
   fun memWrite(addr: UShort, data: UByte) {
@@ -339,6 +340,131 @@ class CPU {
       (data xor result) and
       0x80.toUByte() != 0.toUByte()
     updateZNAndRegA(result)
+  }
+
+  fun aac(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    val op = memRead(addr)
+    updateZNAndRegA(regA and op)
+    status_c = regA.bitIsSetAt(7)
+  }
+
+  fun aax(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    val result = regA and regX
+    updateZN(result)
+    memWrite(addr, result)
+  }
+
+  fun arr(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    val data_value = memRead(addr)
+    var result = regA and data_value
+    result = result.rotateRight(1)
+    result = result.setBitAt(7, status_c)
+    updateZNAndRegA(result)
+    status_c = result.bitIsSetAt(6)
+    status_v = result.bitIsSetAt(6) xor result.bitIsSetAt(5)
+  }
+
+  fun asr(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    val data_value = memRead(addr)
+    var result = regA and data_value
+    status_c = result.bitIsSetAt(0)
+    result = result.shiftRight(1)
+    updateZNAndRegA(result)
+  }
+
+  fun axs(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    val data_value = memRead(addr)
+    val x_and_a = regA and regX
+    val result = (x_and_a.toUInt() - data_value.toUInt()).toUByte()
+    status_c = data_value <= x_and_a
+    updateZNAndRegX(result)
+  }
+
+  fun dop(mode: AddressingMode) {
+
+  }
+
+  fun isc(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    var data = memRead(addr)
+    data = data.inc()
+    memWrite(addr, data)
+    updateZN(data)
+    // isc = A - data - (1 - C), which can be simplified to
+    //     = A + ((-data) - 1) + C
+    addToRegA((-data.toInt() - 1).toUByte())
+  }
+
+  fun lar(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    var data = memRead(addr)
+    data = data and sp
+    regA = data
+    regX = data
+    sp = data
+    updateZN(data)
+  }
+
+  fun rla(mode: AddressingMode) {
+    val old_c: Boolean = this.status_c
+    val data = inplaceModifyAorMem(
+      mode,
+      { this.status_c = it.bitIsSetAt(7) },
+      { it.rotateLeft(1).setBitAt(0, old_c) },
+      { updateZN(it) })
+    updateZNAndRegA(data and regA)
+  }
+
+  fun rra(mode: AddressingMode) {
+    val old_c: Boolean = this.status_c
+    val data = inplaceModifyAorMem(
+      mode,
+      { this.status_c = it.bitIsSetAt(7) },
+      { it.rotateLeft(1).setBitAt(0, old_c) },
+      { updateZN(it) })
+    addToRegA(data)
+  }
+
+  fun slo(mode: AddressingMode) {
+    val data = inplaceModifyAorMem(
+      mode,
+      { this.status_c = it.bitIsSetAt(7) },
+      { (it.toInt() shl 1).toUByte() },
+      { updateZN(it) })
+    updateZNAndRegA(data or regA)
+  }
+
+  fun sre(mode: AddressingMode) {
+    val data = inplaceModifyAorMem(
+      mode,
+      { this.status_c = it.bitIsSetAt(0) },
+      { (it.toInt() ushr 1).toUByte() },
+      { updateZN(it) })
+    updateZNAndRegA(regA xor data)
+  }
+
+  fun shx(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    val data = regX and (addr.toInt() ushr 8).toUByte().inc()
+    memWrite(addr, data)
+  }
+
+  fun shy(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    val data = regY and (addr.toInt() ushr 8).toUByte().inc()
+    memWrite(addr, data)
+  }
+
+  fun xas(mode: AddressingMode) {
+    val addr = getOpAddress(mode)
+    sp = regX and regA
+    val data = sp and (addr.toInt() ushr 8).toUByte().inc()
+    memWrite(addr, data)
   }
 
   fun adc(mode: AddressingMode) {
@@ -526,7 +652,7 @@ class CPU {
   fun lsr(mode: AddressingMode) {
     inplaceModifyAorMem(
       mode,
-      { this.status_c = it.bitIsSetAt(7) },
+      { this.status_c = it.bitIsSetAt(0) },
       { (it.toInt() ushr 1).toUByte() },
       { updateZN(it) })
   }
@@ -560,18 +686,20 @@ class CPU {
   }
 
   fun rol(mode: AddressingMode) {
+    val old_c: Boolean = this.status_c
     inplaceModifyAorMem(
       mode,
       { this.status_c = it.bitIsSetAt(7) },
-      { it.rotateLeft(1) },
+      { it.rotateLeft(1).setBitAt(0, old_c) },
       { updateZN(it) })
   }
 
   fun ror(mode: AddressingMode) {
+    val old_c: Boolean = this.status_c
     inplaceModifyAorMem(
       mode,
-      { this.status_c = it.bitIsSetAt(7) },
-      { it.rotateRight(1) },
+      { this.status_c = it.bitIsSetAt(0) },
+      { it.rotateRight(1).setBitAt(7, old_c) },
       { updateZN(it) },
     )
   }
