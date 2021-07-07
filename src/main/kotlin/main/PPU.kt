@@ -1,16 +1,11 @@
 package main
 
-data class AddrRegister {
+class AddrRegister {
   // High 8 bits of address.
-  val high : UByte
+  private var high : UByte = 0u
   // Low 8 bits of address.
-  val low  : UByte
-  val hiPtr : Boolean
-  constructor() {
-    high = 0u
-    low  = 0u
-    hiPtr = true
-  }
+  private var low  : UByte = 0u
+  private var hiPtr : Boolean = true
 
   fun set(data : UShort) {
     high = data.highByte()
@@ -24,8 +19,8 @@ data class AddrRegister {
       low = data
     }
 
-    if (get() > 0x3fff) {
-      set(get() and 0x3FFF)
+    if (get() > 0x3fffu) {
+      set(get() and 0x3FFFu)
     }
     hiPtr = !hiPtr
   }
@@ -47,12 +42,12 @@ data class AddrRegister {
   }
 
   fun get() : UShort {
-    return ((value.first.toUInt() shl 8) or (value.second.toUInt())).toUShort()
+    return ((high.toUInt() shl 8) or (low.toUInt())).toUShort()
   }
 }
 
-data class ControlRegister {
-  val bits : UByte = 0u
+class ControlRegister {
+  private var bits : UByte = 0u
 
   companion object {
     // 7  bit  0
@@ -82,7 +77,7 @@ data class ControlRegister {
   }
 
   fun vramAddrIncrement() : UByte {
-    if (bits and VRAM_ADD_INCREMENT == 0u) {
+    if (bits and VRAM_ADD_INCREMENT == 0.toUByte()) {
       return 1u
     } else {
       return 32u
@@ -102,10 +97,10 @@ class PPU {
   val mirroring : Mirroring
 
   // Registers
-  val addr: AddrRegister
-  val ctrl: ControlRegister
+  val addrReg = AddrRegister()
+  val ctrlReg = ControlRegister()
 
-  val internalBuffer: UByte
+  var internalBuffer: UByte = 0.toUByte()
 
   constructor(chrROM: UByteArray, mirroring: Mirroring) {
     this.chrROM = chrROM
@@ -116,52 +111,57 @@ class PPU {
   }
 
   fun incrementVramAddr() {
-    addr.increment(ctrl.vramAddrIncrement())
+    addrReg.increment(ctrlReg.vramAddrIncrement())
   }
 
   fun mirrorVramAddr(addr: UShort) : UShort {
-    val mirroredVram = addr and 0x2FFF // Mirror 0x3000-0x3eff to 0x2000-0x2eff
-    val vramIndex = (mirroredVram - 0x2000).toUShort()
-    val nameTableIndex = vramIndex / 0x400u
+    val mirroredVram = addr and 0x2FFF.toUShort() // Mirror 0x3000-0x3eff to 0x2000-0x2eff
+    val vramIndex = (mirroredVram - 0x2000u).toUShort()
+    val nameTableIndex = (vramIndex / 0x400u).toInt()
     if (mirroring == Mirroring.VERTICAL) {
       if (nameTableIndex == 2 || nameTableIndex == 3) {
-        return (vramIndex - 0x800u).toUInt()
+        return (vramIndex - 0x800u).toUShort()
       }
     }
     if (mirroring == Mirroring.HORIZONTAL) {
       if (nameTableIndex == 1) {
-        return (vramIndex - 0x400u).toUInt()
+        return (vramIndex - 0x400u).toUShort()
       }
       if (nameTableIndex == 2) {
-        return (vramIndex - 0x400u).toUInt()
+        return (vramIndex - 0x400u).toUShort()
       }
       if (nameTableIndex == 3) {
-        return (vramIndex - 0x800u).toUInt()
+        return (vramIndex - 0x800u).toUShort()
       }
     }
     return vramIndex
   }
 
   fun readData() : UByte {
-    val addr = addr.get()
+    val addr = addrReg.get()
     incrementVramAddr()
 
     when (addr) {
-      in 0..0x1FFF -> {
+      in 0u..0x1FFFu -> {
         val result = internalBuffer
-        internalBuffer = chrROM[addr.toUInt()]
+        internalBuffer = chrROM[addr.toInt()]
         return result
       }
-      in 0x2000..0x2FFF -> {
+      in 0x2000u..0x2FFFu -> {
         val result = internalBuffer
-        internalBuffer = vram[mirrorVramAddr(addr).toUInt()]
+        internalBuffer = vram[mirrorVramAddr(addr).toInt()]
         return result
       }
-      in 0x3000..0x3EFF -> {
+      in 0x3000u..0x3EFFu -> {
         TODO("Unexpected read: " + addr.toHex())
       }
-      in 0x3F00..0x3FFF -> {
-        paletteTable[addr - 0x3F00u]
+      0x3F10.toUShort(), 0x3f14.toUShort(),
+      0x3f18.toUShort(), 0x3f1c.toUShort() -> {
+        val addr_mirror = addr - 0x10u
+        return paletteTable[(addr_mirror - 0x3F00u).toInt()]
+      }
+      in 0x3F00u..0x3FFFu -> {
+        return paletteTable[(addr - 0x3F00u).toInt()]
       }
       else -> {
         TODO("Unexpected read: " + addr.toHex())
@@ -169,11 +169,39 @@ class PPU {
     }
   }
 
-  fun writeToAddr(value : UByte) {
-    addr.update(value)
+  fun writeData(data: UByte) {
+    val addr = addrReg.get()
+    incrementVramAddr()
+
+    when (addr) {
+      in 0u..0x1FFFu -> {
+        TODO("Readonly ")
+      }
+      in 0x2000u..0x2FFFu -> {
+        vram[mirrorVramAddr(addr).toInt()] = data
+      }
+      in 0x3000u..0x3EFFu -> {
+        TODO("Unexpected read: " + addr.toHex())
+      }
+      0x3F10.toUShort(), 0x3f14.toUShort(),
+      0x3f18.toUShort(), 0x3f1c.toUShort() -> {
+        val addr_mirror = addr - 0x10u
+        paletteTable[(addr_mirror - 0x3F00u).toInt()] = data
+      }
+      in 0x3F00u..0x3FFFu -> {
+        paletteTable[(addr - 0x3F00u).toInt()] = data
+      }
+      else -> {
+        TODO("Unexpected read: " + addr.toHex())
+      }
+    }
   }
 
-  fun writeToCtrl(value : UByte) {
-    ctrl.update(value)
+  fun writeToAddrReg(value : UByte) {
+    addrReg.update(value)
+  }
+
+  fun writeToCtrlReg(value : UByte) {
+    ctrlReg.update(value)
   }
 }
